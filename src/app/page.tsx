@@ -550,19 +550,19 @@ function BlogSection() {
   {
     title: "Tatilini Devretmek Güvenli mi? 7 İpucu",
     desc: "Devir sürecinde dikkat etmen gereken kritik noktalar.",
-    href: "/blog",
+    href: "/blog/1",
     img: "/images/blog-1.jpg",
   },
   {
     title: "Erken Rezervasyon İptalinde Para Nasıl Kurtarılır?",
     desc: "İptal koşulları + alternatif çözümler.",
-    href: "/blog",
+    href: "/blog/2",
     img: "/images/blog-2.jpg",
   },
   {
     title: "Villa, Otel, Bungalow: Hangisi Daha Avantajlı?",
     desc: "Bütçe ve deneyime göre doğru seçimi yap.",
-    href: "/blog",
+    href: "/blog/3",
     img: "/images/blog-3.jpg",
   },
   {
@@ -574,31 +574,31 @@ function BlogSection() {
   {
     title: "Bütçe Dostu Tatil Tüyoları",
     desc: "İndirimli ilanları doğru zamanda yakala.",
-    href: "/blog",
+    href: "/blog/5",
     img: "/images/blog-5.jpg",
   },
   {
     title: "Dolandırıcılığa Karşı 9 Güvenlik Kontrolü",
     desc: "Ödeme ve kimlik süreçlerinde dikkat.",
-    href: "/blog",
+    href: "/blog/6",
     img: "/images/blog-6.jpg",
   },
   {
     title: "Tatil Devri Nedir? Yeni Nesil Tatil",
     desc: "Kullanılmayan rezervasyonları değerlendirme rehberi.",
-    href: "/blog",
+    href: "/blog/7",
     img: "/images/blog-7.jpg",
   },
   {
     title: "Konaklama Devirlerinde Sık Yapılan Hatalar",
     desc: "Bu hatalardan kaçın, paran boşa gitmesin.",
-    href: "/blog",
+    href: "/blog/8",
     img: "/images/blog-8.jpg",
   },
   {
     title: "Tatilini Devretmenin Avantajları",
     desc: "Hem alıcı hem satıcı için kazan-kazan modeli.",
-    href: "/blog",
+    href: "/blog/9",
     img: "/images/blog-9.jpg",
   },
 ];

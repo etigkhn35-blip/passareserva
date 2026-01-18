@@ -13,7 +13,11 @@ type Chat = {
   updatedAt?: any;
 };
 
-export default function MesajlarPage() {
+const ADMIN_UIDS = [
+  "Presmt66LxdgLJQZareFD0Os7kL2", // 👈 buraya admin uid gelecek
+];
+
+export default function MesajlarContent() {
   const [userId, setUserId] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
 
@@ -26,6 +30,7 @@ export default function MesajlarPage() {
 
   useEffect(() => {
     if (!userId) return;
+
     const q = query(
       collection(db, "messages"),
       where("participants", "array-contains", userId),
@@ -35,8 +40,9 @@ export default function MesajlarPage() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data(),
+        ...(doc.data() as any),
       })) as Chat[];
+
       setChats(data);
     });
 
@@ -54,15 +60,21 @@ export default function MesajlarPage() {
           <div className="space-y-3">
             {chats.map((chat) => {
               const otherUser = chat.participants.find((p) => p !== userId);
+
+              const otherLabel = otherUser
+                ? ADMIN_UIDS.includes(otherUser)
+                  ? "Yönetici"
+                  : "Kullanıcı"
+                : "Kullanıcı";
+
               return (
                 <Link
                   key={chat.id}
                   href={`/mesajlar/${chat.id}`}
                   className="block bg-white border border-gray-200 rounded-xl p-4 hover:shadow-sm transition"
                 >
-                  <div className="font-semibold text-gray-900">
-                    {otherUser || "Kullanıcı"}
-                  </div>
+                  <div className="font-semibold text-gray-900">{otherLabel}</div>
+
                   <div className="text-sm text-gray-500 mt-1">
                     {chat.lastMessage || "Yeni sohbet başlatıldı."}
                   </div>

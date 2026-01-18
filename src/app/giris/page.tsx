@@ -174,7 +174,7 @@ const [rememberMe, setRememberMe] = useState(false);
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded font-semibold"
+            className="w-full py-3 rounded-lg text-white font-semibold bg-[#1DA1F2] hover:bg-[#168BD1] transition"
           >
             {loading ? "Giriş yapılıyor..." : "E-posta ile giriş yap"}
           </button>

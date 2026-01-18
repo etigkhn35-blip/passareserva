@@ -127,9 +127,9 @@ export default function YayindaOlanlarPage() {
                       >
                         <Pause className="w-5 h-5" />
                       </button>
-                      <Link href={`/ilan-duzenle/${ilan.id}`}>
-                        <Edit3 className="w-5 h-5 text-blue-600 hover:text-blue-800" />
-                      </Link>
+                      <Link href={`/ilan-duzenle/${ilan.id}`} className="text-sm text-blue-600 hover:underline">
+  ✏️ 
+</Link>
                       <button
                         onClick={() => handleDelete(ilan.id)}
                         className="text-red-600 hover:text-red-800"
