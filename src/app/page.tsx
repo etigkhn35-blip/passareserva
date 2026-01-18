@@ -16,7 +16,8 @@ type Card = {
   price: number;
   cover?: string;
   category?: string;
-  isFake?: boolean; // ✅ fake/gerçek ayrımı
+  isFake?: boolean;
+  bitisTarihi?: any;
 };
 
 /* ----------------------------- DEFAULT GÖRSELLER ---------------------------- */
@@ -48,9 +49,103 @@ const DEFAULT_IMAGES: Record<string, string> = {
   "Spor Etkinliği + Otel": "/defaults/etkinlik-spor.jpg",
   "Kültür & Sanat + Otel": "/defaults/etkinlik-kultur.jpg",
   "Workshop + Tatil": "/defaults/etkinlik-workshop.jpg",
+  "Müzik Festivalleri": "/defaults/etkinlik-muzik-festivalleri.jpg",
+  "Konserler": "/defaults/etkinlik-konserler.jpg",
+  "DJ / Club Event": "/defaults/etkinlik-dj-club.jpg",
+  "Açık Hava Etkinlikleri": "/defaults/etkinlik-acik-hava.jpg",
+
+  "Sanat & Tasarım": "/defaults/etkinlik-sanat-tasarim.jpg",
+  "Fotoğraf & Video": "/defaults/etkinlik-fotograf-video.jpg",
+  "Gastronomi (şef workshop, tadım)": "/defaults/etkinlik-gastronomi-workshop.jpg",
+  "Kişisel Gelişim": "/defaults/etkinlik-kisisel-gelisim.jpg",
+  "Yoga & Meditasyon": "/defaults/etkinlik-yoga-meditasyon.jpg",
+
+  "Futbol Maçları": "/defaults/etkinlik-futbol.jpg",
+  "Basketbol / Voleybol": "/defaults/etkinlik-basketbol.jpg",
+  "Tenis Turnuvaları": "/defaults/etkinlik-tenis.jpg",
+  "Maraton / Koşu": "/defaults/etkinlik-maraton.jpg",
+  "CrossFit / Fitness Event": "/defaults/etkinlik-crossfit.jpg",
+  "Extreme Sports": "/defaults/etkinlik-extreme-sports.jpg",
+
+  "Tiyatro": "/defaults/etkinlik-tiyatro.jpg",
+  "Müzikal": "/defaults/etkinlik-muzikal.jpg",
+  "Opera & Bale": "/defaults/etkinlik-opera-bale.jpg",
+  "Stand-up": "/defaults/etkinlik-standup.jpg",
+  "Gösteriler": "/defaults/etkinlik-gosteri.jpg",
+
+  "Dalış / Yelken Eğitimi": "/defaults/etkinlik-dalis-yelken.jpg",
+  "Gastronomi Deneyimi": "/defaults/etkinlik-gastronomi-deneyim.jpg",
+  "Şarap Tadımı": "/defaults/etkinlik-sarap-tadimi.jpg",
+  "Şehir Turları": "/defaults/etkinlik-sehir-turu.jpg",
+  "Atölye Deneyimleri": "/defaults/etkinlik-atolye-deneyimi.jpg",
+
+  "Çocuk Festivalleri": "/defaults/etkinlik-cocuk-festivali.jpg",
+  "Atölyeler": "/defaults/etkinlik-cocuk-atolye.jpg",
+  "Tema Park Biletleri": "/defaults/etkinlik-tema-park.jpg",
+  "Oyun Alanları": "/defaults/etkinlik-oyun-alani.jpg",
+  "Çocuk Gösterileri": "/defaults/etkinlik-cocuk-gosteri.jpg",
+
+  "Konferans": "/defaults/etkinlik-konferans.jpg",
+  "Zirve": "/defaults/etkinlik-zirve.jpg",
+  "Fuar Girişleri": "/defaults/etkinlik-fuar.jpg",
+  "Networking Event": "/defaults/etkinlik-networking.jpg",
+  "Startup Etkinlikleri": "/defaults/etkinlik-startup.jpg",
 
   Genel: "/defaults/default.jpg",
 };
+
+const EVENT_SUBCATEGORIES: Record<string, string[]> = {
+  "Festival & Konser": [
+    "Müzik Festivalleri",
+    "Konserler",
+    "DJ / Club Event",
+    "Açık Hava Etkinlikleri",
+  ],
+  "Workshop & Eğitim": [
+    "Sanat & Tasarım",
+    "Fotoğraf & Video",
+    "Gastronomi (şef workshop, tadım)",
+    "Kişisel Gelişim",
+    "Yoga & Meditasyon",
+  ],
+  "Spor Etkinlikleri": [
+    "Futbol Maçları",
+    "Basketbol / Voleybol",
+    "Tenis Turnuvaları",
+    "Maraton / Koşu",
+    "CrossFit / Fitness Event",
+    "Extreme Sports",
+  ],
+  "Sahne & Gösteri Sanatları": [
+    "Tiyatro",
+    "Müzikal",
+    "Opera & Bale",
+    "Stand-up",
+    "Gösteriler",
+  ],
+  "Deneyim & Aktivite": [
+    "Dalış / Yelken Eğitimi",
+    "Gastronomi Deneyimi",
+    "Şarap Tadımı",
+    "Şehir Turları",
+    "Atölye Deneyimleri",
+  ],
+  "Aile & Çocuk Etkinlikleri": [
+    "Çocuk Festivalleri",
+    "Atölyeler",
+    "Tema Park Biletleri",
+    "Gösteriler",
+    "Oyun Alanları",
+  ],
+  "Business & Networking": [
+    "Konferans",
+    "Zirve",
+    "Fuar Girişleri",
+    "Networking Event",
+    "Startup Etkinlikleri",
+  ],
+};
+
 
 /* ----------------------------- KATEGORİLER ------------------------------ */
 const CATEGORIES = [
@@ -95,11 +190,13 @@ const CATEGORIES = [
     title: "Etkinlik Paketleri",
     icon: "🎟️",
     subs: [
-      "Festival + Konaklama",
-      "Konser + Konaklama",
-      "Spor Etkinliği + Otel",
-      "Kültür & Sanat + Otel",
-      "Workshop + Tatil",
+      "Festival & Konser",
+      "Workshop & Eğitim",
+      "Spor Etkinlikleri",
+      "Sahne & Gösteri Sanatları",
+      "Deneyim & Aktivite",
+      "Aile & Çocuk Etkinlikleri",
+      "Business & Networking",
     ],
   },
 ];
@@ -133,10 +230,65 @@ function DiscountBadge({ indirim }: { indirim: number }) {
   return null;
 }
 
+
+/* -------------------------- SÜRE ROZETİ ------------------------- */
+function TimeBadge({ bitisTarihi }: { bitisTarihi?: any }) {
+  if (!bitisTarihi) return null;
+
+  const end =
+    typeof bitisTarihi?.toDate === "function"
+      ? bitisTarihi.toDate()
+      : new Date(bitisTarihi);
+
+  const now = new Date();
+  const diffMs = end.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  // Süresi geçmişse gösterme
+if (diffDays <= 0) return null;
+
+// 15 günden fazlaysa hiç gösterme
+if (diffDays > 15) return null;
+
+// 8-15 gün = yeşil
+if (diffDays >= 8) {
+  return (
+    <div className="absolute top-2 left-2 z-10">
+      <div className="bg-green-600 text-white text-[10.5px] font-semibold px-2 py-1 rounded-md shadow-md">
+        {diffDays} gün kaldı
+      </div>
+    </div>
+  );
+}
+
+  // 3-6 gün = turuncu
+  if (diffDays >= 3) {
+    return (
+      <div className="absolute top-2 left-2 z-10">
+        <div className="bg-orange-500 text-white text-[10.5px] font-semibold px-2 py-1 rounded-md shadow-md">
+          {diffDays} gün kaldı
+        </div>
+      </div>
+    );
+  }
+
+  // son 1-2 gün = kırmızı
+  return (
+    <div className="absolute top-2 left-2 z-10">
+      <div className="bg-red-600 text-white text-[10.5px] font-semibold px-2 py-1 rounded-md shadow-md">
+        Son {diffDays} gün!
+      </div>
+    </div>
+  );
+}
+
+
 /* -------------------------- KART KOMPONENTİ ------------------------- */
 function VitrinCard({ item }: { item: Card }) {
   const imageSrc =
-    item.cover || DEFAULT_IMAGES[item.category || "Genel"] || DEFAULT_IMAGES["Genel"];
+    item.cover ||
+    DEFAULT_IMAGES[item.category || "Genel"] ||
+    DEFAULT_IMAGES["Genel"];
 
   const indirim = Number((item as any).indirim || 0);
 
@@ -152,6 +304,9 @@ function VitrinCard({ item }: { item: Card }) {
           alt={item.title}
           className="w-full h-full object-cover group-hover:scale-105 transition"
         />
+
+        {/* 🔹 Süre rozeti (SADECE gerçek ilanlarda) */}
+        {!item.isFake && <TimeBadge bitisTarihi={(item as any).bitisTarihi} />}
 
         {/* 🔹 Rozetler (SADECE gerçek ilanlarda) */}
         {!item.isFake && indirim > 0 && <DiscountBadge indirim={indirim} />}
@@ -173,7 +328,9 @@ function VitrinCard({ item }: { item: Card }) {
 
       {/* Daha kompakt */}
       <div className="p-2">
-        <div className="text-[11px] text-gray-500 line-clamp-1">{item.location}</div>
+        <div className="text-[11px] text-gray-500 line-clamp-1">
+          {item.location}
+        </div>
         <div className="font-semibold text-gray-900 mt-0.5 line-clamp-1 text-[12.5px]">
           {item.title}
         </div>
@@ -192,6 +349,9 @@ function VitrinCard({ item }: { item: Card }) {
 function CategoryAccordion() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
+  // Etkinlik üst kategori aç/kapa için
+  const [openEventMain, setOpenEventMain] = useState<string | null>(null);
+
   return (
     <aside className="w-full lg:w-64 shrink-0">
       <div className="sticky top-4">
@@ -200,6 +360,7 @@ function CategoryAccordion() {
         <div className="space-y-2">
           {CATEGORIES.map((c, idx) => {
             const isOpen = openIndex === idx;
+            const isEventPack = c.title === "Etkinlik Paketleri";
 
             return (
               <div
@@ -208,9 +369,14 @@ function CategoryAccordion() {
               >
                 {/* BAŞLIK */}
                 <button
-                  onClick={() =>
-                    setOpenIndex(isOpen ? null : idx)
-                  }
+                  onClick={() => {
+                    setOpenIndex(isOpen ? null : idx);
+
+                    // Etkinlik paketleri kapanınca altını da kapat
+                    if (isOpen && isEventPack) {
+                      setOpenEventMain(null);
+                    }
+                  }}
                   className="
                     w-full flex items-center justify-between gap-3
                     px-4 py-3
@@ -224,30 +390,80 @@ function CategoryAccordion() {
                   </span>
 
                   {/* Mobil ok */}
-                  <span className="lg:hidden">
-                    {isOpen ? "−" : "+"}
-                  </span>
+                  <span className="lg:hidden">{isOpen ? "−" : "+"}</span>
                 </button>
 
                 {/* ALT KATEGORİLER */}
-                <ul
+                <div
                   className={`
-                    px-4 pb-3 space-y-2 text-sm
+                    px-4 pb-3 text-sm
                     ${isOpen ? "block" : "hidden"}
                     lg:block
                   `}
                 >
-                  {c.subs.map((s) => (
-                    <li key={s}>
-                      <a
-                        href={`/kategori/${encodeURIComponent(s)}`}
-                        className="block text-gray-700 hover:text-primary"
-                      >
-                        {s}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+                  {/* ✅ NORMAL KATEGORİLER */}
+                  {!isEventPack && (
+                    <ul className="space-y-2">
+                      {c.subs.map((s) => (
+                        <li key={s}>
+                          <a
+                            href={`/kategori/${encodeURIComponent(s)}`}
+                            className="block text-gray-700 hover:text-primary"
+                          >
+                            {s}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* ✅ ETKİNLİK PAKETLERİ (2 KATMANLI) */}
+                  {isEventPack && (
+                    <div className="space-y-2">
+                      {c.subs.map((eventMain) => {
+                        const isEventMainOpen = openEventMain === eventMain;
+                        const eventSubs = EVENT_SUBCATEGORIES[eventMain] || [];
+
+                        return (
+                          <div
+                            key={eventMain}
+                            className="border border-gray-100 rounded-lg overflow-hidden"
+                          >
+                            {/* ÜST KATEGORİ BUTONU */}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setOpenEventMain(isEventMainOpen ? null : eventMain)
+                              }
+                              className="w-full flex items-center justify-between px-3 py-2 text-gray-700 hover:text-primary font-normal"
+                            >
+                              <span>{eventMain}</span>
+                              <span className="text-gray-500">
+                                {isEventMainOpen ? "−" : "+"}
+                              </span>
+                            </button>
+
+                            {/* ALT KIRILIMLAR */}
+                            {isEventMainOpen && (
+                              <ul className="px-3 pb-2 space-y-1">
+                                {eventSubs.map((sub) => (
+                                  <li key={sub}>
+                                    <a
+                                      href={`/kategori/${encodeURIComponent(sub)}`}
+                                      className="block text-gray-600 hover:text-primary text-[13px]"
+                                    >
+                                      • {sub}
+                                    </a>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -259,10 +475,28 @@ function CategoryAccordion() {
 
 
 /* ----------------------------- FAKE İLANLAR ----------------------------- */
-const SUBCAT_TO_MAIN: Record<string, string> = CATEGORIES.reduce((acc, cat) => {
-  cat.subs.forEach((sub) => (acc[sub] = cat.title));
+const SUBCAT_TO_MAIN: Record<string, string> = (() => {
+  const acc: Record<string, string> = {};
+
+  // normal kategoriler
+  CATEGORIES.forEach((cat) => {
+    if (cat.title !== "Etkinlik Paketleri") {
+      cat.subs.forEach((sub) => {
+        acc[sub] = cat.title;
+      });
+    }
+  });
+
+  // etkinlik paketleri alt-alt kategoriler
+  Object.entries(EVENT_SUBCATEGORIES).forEach(([main, subs]) => {
+    subs.forEach((sub) => {
+      acc[sub] = "Etkinlik Paketleri";
+    });
+  });
+
   return acc;
-}, {} as Record<string, string>);
+})();
+
 
 function buildFakeListings(): Card[] {
   const cities = [
@@ -284,9 +518,18 @@ function buildFakeListings(): Card[] {
     const city = cities[i % cities.length];
     const price = 3000 + (i % 9) * 450;
 
+    // ✅ daha düzgün ilan başlığı
+    const niceTitles = [
+      `${sub} için fırsat ilanı`,
+      `${sub} devren uygun fiyat`,
+      `${sub} erken rezervasyon fırsatı`,
+      `${sub} son dakika fırsatı`,
+      `${sub} avantajlı paket`,
+    ];
+
     listings.push({
       id: `fake-${i}`,
-      title: `${sub} – Tatil Fırsatı`,
+      title: niceTitles[i % niceTitles.length],
       location: city,
       price,
       category: sub,
@@ -299,7 +542,6 @@ function buildFakeListings(): Card[] {
 
   return listings;
 }
-
 /* ----------------------------- BLOG SLIDER (6 ADET, 3'ER 3'ER, 10sn) ----------------------------- */
 type BlogPost = { title: string; desc: string; href: string; img: string };
 
@@ -444,7 +686,7 @@ export default function HomePage() {
   const [muhteşem, setMuhteşem] = useState<Card[]>([]);
   
 
-  useEffect(() => {
+ useEffect(() => {
   const fetchData = async () => {
     try {
       const q = query(
@@ -465,18 +707,20 @@ export default function HomePage() {
 
         return {
           id: d.id,
-          title: doc.baslik,
+          title: doc.baslik || "İsimsiz İlan",
           location: `${doc.il || ""} ${doc.ilce || ""}`.trim(),
           price: ucret,
           cover:
             doc.coverUrl ||
             DEFAULT_IMAGES[doc.altKategori || doc.kategori || "Genel"],
-          category: doc.kategori,
+          category: doc.altKategori || doc.kategori,
           isFake: false,
           indirim,
           anasayfaVitrin: Boolean(doc.anasayfaVitrin),
+          bitisTarihi: doc.cikisTarihi ? new Date(doc.cikisTarihi + "T00:00:00") : null
         };
       });
+
 
       /* 🔥 EFSANE (%40+) */
       setEfsane(data.filter((i) => i.indirim >= 40).slice(0, 12));
@@ -731,36 +975,29 @@ const vitrinView: Card[] = vitrin.slice(0, VITRIN_LIMIT);
               </li>
             </ul>
           </div>
-
-          <div>
-            <h3 className="font-semibold text-white mb-3 text-lg">İletişim</h3>
-            <p className="text-gray-700">Adres: Türkiye, İstanbul</p>
-            <p className="text-gray-700">Telefon: +90 (850) 304 84 01</p>
-            <p className="text-gray-700">E-posta: info@tatilinidevret.com</p>
-            <div className="flex justify-center gap-4 mt-3 text-gray-600">
-              <a href="https://www.instagram.com/tatilinidevret" className="hover:text-primary">
-                Instagram
-              </a>
-              <a href="https://www.linkedin.com/company/tatilinidevret" className="hover:text-primary">
-                LinkedIn
-              </a>
-              <a href="https://x.com/tatilinidevret" className="hover:text-primary">
-                X
-              </a>
-              <a href="https://www.facebook.com/tatilinidevret" className="hover:text-primary">
-                Facebook
-              </a>
-              <a href="https://www.youtube.com/@tatilinidevret" className="hover:text-primary">
-                YouTube
-              </a>
-              <a href="https://www.pinterest.com/tatilinidevret" className="hover:text-primary">
-                Pinterest
-              </a>
-              <a href="https://www.tiktok.com/tatilinidevret" className="hover:text-primary">
-                TikTok
-              </a>
-            </div>
-          </div>
+<div>
+  <h3 className="font-semibold text-white mb-3 text-lg">İletişim</h3>
+  <p className="text-gray-400">Adres: Türkiye, İstanbul</p>
+  <p className="text-gray-400">Telefon: +90 (850) 304 84 01</p>
+  <p className="text-gray-400">E-posta: info@tatilinidevret.com</p>
+  
+  {/* Sosyal Medya Linkleri - 2 Satır Halinde */}
+  <div className="mt-4 space-y-2">
+    {/* Üst Satır (4 İkon) */}
+    <div className="flex justify-center gap-4 text-gray-500">
+      <a href="https://www.instagram.com/tatilinidevret" className="hover:text-primary transition">Instagram</a>
+      <a href="https://www.linkedin.com/company/tatilinidevret" className="hover:text-primary transition">LinkedIn</a>
+      <a href="https://x.com/tatilinidevret" className="hover:text-primary transition">X</a>
+      <a href="https://www.facebook.com/tatilinidevret" className="hover:text-primary transition">Facebook</a>
+    </div>
+    {/* Alt Satır (3 İkon) */}
+    <div className="flex justify-center gap-4 text-gray-500">
+      <a href="https://www.youtube.com/@tatilinidevret" className="hover:text-primary transition">YouTube</a>
+      <a href="https://www.pinterest.com/tatilinidevret" className="hover:text-primary transition">Pinterest</a>
+      <a href="https://www.tiktok.com/tatilinidevret" className="hover:text-primary transition">TikTok</a>
+    </div>
+  </div>
+</div>
         </div>
 
         <div className="text-center text-xs text-gray-600 pb-6">

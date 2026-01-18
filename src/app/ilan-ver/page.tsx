@@ -6,6 +6,8 @@ import { addDoc, collection, getDocs, query, where, serverTimestamp } from "fire
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useRouter } from "next/navigation";
 import { CATEGORY_FIELDS } from "@/data/categoryFields";
+import { PRICING, isEventCategory, EVENT_SUBCATEGORIES } from "@/lib/pricing";
+
 
 
 /* ------------------------------ Helpers ------------------------------ */
@@ -17,6 +19,16 @@ const formatIlanNo = () => {
   const dd = String(d.getDate()).padStart(2, "0");
   const rand = Math.floor(1000 + Math.random() * 9000);
   return `TD-${y}${m}${dd}-${rand}`;
+};
+const formatWithComma = (val: string) => {
+  if (!val) return "";
+  const num = Number(val.replace(/,/g, ""));
+  if (isNaN(num)) return "";
+  return num.toLocaleString("en-US"); // 15,000 formatı
+};
+
+const onlyNumbers = (val: string) => {
+  return val.replace(/[^0-9]/g, "");
 };
 
 /* ------------------ Alt kategoriye göre görsel eşleştirme ------------------ */
@@ -75,19 +87,69 @@ const getDefaultCover = (kategori: string, altKategori?: string) => {
     return "/defaults/tur-genel.jpg";
   }
 
-  // 🔹 Etkinlik Paketleri
+  // 🔹 Etkinlik Paketleri (alt kategoriler FULL)
   if (k.includes("etkinlik")) {
-    if (a.includes("festival")) return "/defaults/etkinlik-festival.jpg";
-    if (a.includes("konser")) return "/defaults/etkinlik-konser.jpg";
-    if (a.includes("spor")) return "/defaults/etkinlik-spor.jpg";
-    if (a.includes("kultur") || a.includes("sanat")) return "/defaults/etkinlik-kultur.jpg";
-    if (a.includes("workshop")) return "/defaults/etkinlik-workshop.jpg";
+    // Festival & Konser
+    if (a.includes("muzik festivalleri")) return "/defaults/etkinlik-muzik-festivalleri.jpg";
+    if (a.includes("konserler")) return "/defaults/etkinlik-konserler.jpg";
+    if (a.includes("dj") || a.includes("club")) return "/defaults/etkinlik-dj-club.jpg";
+    if (a.includes("acik hava")) return "/defaults/etkinlik-acik-hava.jpg";
+
+    // Workshop & Eğitim
+    if (a.includes("sanat") || a.includes("tasarim")) return "/defaults/etkinlik-sanat-tasarim.jpg";
+    if (a.includes("fotograf") || a.includes("video")) return "/defaults/etkinlik-fotograf-video.jpg";
+    if (a.includes("gastronomi") || a.includes("sef") || a.includes("tadim"))
+      return "/defaults/etkinlik-gastronomi-workshop.jpg";
+    if (a.includes("kisisel gelisim")) return "/defaults/etkinlik-kisisel-gelisim.jpg";
+    if (a.includes("yoga") || a.includes("meditasyon")) return "/defaults/etkinlik-yoga-meditasyon.jpg";
+
+    // Spor Etkinlikleri
+    if (a.includes("futbol")) return "/defaults/etkinlik-futbol.jpg";
+    if (a.includes("basketbol") || a.includes("voleybol")) return "/defaults/etkinlik-basketbol.jpg";
+    if (a.includes("tenis")) return "/defaults/etkinlik-tenis.jpg";
+    if (a.includes("maraton") || a.includes("kosu")) return "/defaults/etkinlik-maraton.jpg";
+    if (a.includes("crossfit") || a.includes("fitness")) return "/defaults/etkinlik-crossfit.jpg";
+    if (a.includes("extreme")) return "/defaults/etkinlik-extreme-sports.jpg";
+
+    // Sahne & Gösteri Sanatları
+    if (a.includes("tiyatro")) return "/defaults/etkinlik-tiyatro.jpg";
+    if (a.includes("muzikal")) return "/defaults/etkinlik-muzikal.jpg";
+    if (a.includes("opera") || a.includes("bale")) return "/defaults/etkinlik-opera-bale.jpg";
+    if (a.includes("standup") || a.includes("stand up")) return "/defaults/etkinlik-standup.jpg";
+    if (a.includes("gosteriler") || a.includes("gosteri")) return "/defaults/etkinlik-gosteri.jpg";
+
+    // Deneyim & Aktivite
+    if (a.includes("dalis") || a.includes("yelken")) return "/defaults/etkinlik-dalis-yelken.jpg";
+    if (a.includes("gastronomi deneyimi")) return "/defaults/etkinlik-gastronomi-deneyim.jpg";
+    if (a.includes("sarap")) return "/defaults/etkinlik-sarap-tadimi.jpg";
+    if (a.includes("sehir tur")) return "/defaults/etkinlik-sehir-turu.jpg";
+    if (a.includes("atolye deneyimleri") || a.includes("atolye deneyim"))
+      return "/defaults/etkinlik-atolye-deneyimi.jpg";
+
+    // Aile & Çocuk Etkinlikleri
+    if (a.includes("cocuk festivalleri") || a.includes("cocuk festivali"))
+      return "/defaults/etkinlik-cocuk-festivali.jpg";
+    if (a.includes("atolyeler") || a.includes("atolye")) return "/defaults/etkinlik-cocuk-atolye.jpg";
+    if (a.includes("tema park")) return "/defaults/etkinlik-tema-park.jpg";
+    if (a.includes("gosteriler") || a.includes("gosteri")) return "/defaults/etkinlik-cocuk-gosteri.jpg";
+    if (a.includes("oyun alanlari") || a.includes("oyun alani")) return "/defaults/etkinlik-oyun-alani.jpg";
+
+    // Business & Networking
+    if (a.includes("konferans")) return "/defaults/etkinlik-konferans.jpg";
+    if (a.includes("zirve")) return "/defaults/etkinlik-zirve.jpg";
+    if (a.includes("fuar")) return "/defaults/etkinlik-fuar.jpg";
+    if (a.includes("networking")) return "/defaults/etkinlik-networking.jpg";
+    if (a.includes("startup")) return "/defaults/etkinlik-startup.jpg";
+
+    // fallback
     return "/defaults/etkinlik-festival.jpg";
   }
 
   // 🔹 Fallback
   return "/defaults/default.jpg";
 };
+
+
 
 /* --------------------------- Kategori Yapısı -------------------------- */
 const CATEGORIES: Record<string, string[]> = {
@@ -117,11 +179,13 @@ const CATEGORIES: Record<string, string[]> = {
     "Balayı Turları",
   ],
   "Etkinlik Paketleri": [
-    "Festival + Konaklama",
-    "Konser + Konaklama",
-    "Spor Etkinliği + Otel",
-    "Kültür & Sanat + Otel",
-    "Workshop + Tatil",
+    "Festival & Konser",
+    "Workshop & Eğitim",
+    "Spor Etkinlikleri",
+    "Sahne & Gösteri Sanatları",
+    "Deneyim & Aktivite",
+    "Aile & Çocuk Etkinlikleri",
+    "Business & Networking",
   ],
 };
 
@@ -147,6 +211,9 @@ export default function IlanVerPage() {
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
   const [subOptions, setSubOptions] = useState<string[]>([]);
+  const isEvent = isEventCategory(category);
+  const plan = isEvent ? PRICING.event : PRICING.normal;
+  const [eventMainCategory, setEventMainCategory] = useState("");
 
   // Genel alanlar
   const [title, setTitle] = useState("");
@@ -222,6 +289,9 @@ export default function IlanVerPage() {
   const [vitrin, setVitrin] = useState(false);
   const [kalinYazi, setKalinYazi] = useState(false);
   const [kvkkOnay, setKvkkOnay] = useState(false);
+  const boostCategoryFeatured = plan.boosts.categoryFeatured.price;
+  const boostHomeVitrin = plan.boosts.homeVitrin.price;
+  const boostBoldTitle = plan.boosts.boldTitle.price;
 
   // KVKK / Koşullar modal
   const [policyOpen, setPolicyOpen] = useState(false);
@@ -261,9 +331,26 @@ useEffect(() => {
 
 /* Alt kategori seçeneklerini güncelle */
 useEffect(() => {
-  setSubOptions(category ? CATEGORIES[category] : []);
+  // Etkinlik değilse normal kategori sistemi
+  if (category !== "Etkinlik Paketleri") {
+    setSubOptions(category ? CATEGORIES[category] : []);
+    setSubCategory("");
+    setEventMainCategory("");
+    return;
+  }
+
+  // Etkinlikse: alt kategori seçenekleri üst kategoriye göre gelsin
+  if (!eventMainCategory) {
+    setSubOptions([]);
+    setSubCategory("");
+    return;
+  }
+
+  // pricing.ts içinden alt kırılımlar
+  // EVENT_SUBCATEGORIES importlu olduğu için buradan kullanacağız
+  setSubOptions(EVENT_SUBCATEGORIES[eventMainCategory] || []);
   setSubCategory("");
-}, [category]);
+}, [category, eventMainCategory]);
 
 /* Kaç gece kalınacak hesaplama */
 const nights = useMemo(() => {
@@ -304,6 +391,8 @@ const nights = useMemo(() => {
     if (title.trim().length < 6) return "⚠️ Başlık en az 6 karakter olmalı.";
     if (desc.trim().length < 10) return "⚠️ Açıklama en az 10 karakter olmalı.";
     if (!category) return "⚠️ Ana kategori seçilmedi.";
+    if (category === "Etkinlik Paketleri" && !eventMainCategory)
+  return "⚠️ Etkinlik üst kategorisi seçilmedi.";
     if (!subCategory) return "⚠️ Alt kategori seçilmedi.";
     if (!checkIn || !checkOut) return "⚠️ Giriş/Çıkış tarihleri seçilmedi.";
     if (Number(price) <= 0) return "⚠️ Satış fiyatı girilmedi.";
@@ -688,44 +777,89 @@ const nights = useMemo(() => {
             />
           </div>
 
-          {/* Kategoriler */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-semibold mb-1">
-                Ana Kategori <span className="text-red-600">*</span>
-              </label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2"
-              >
-                <option value="">Seçiniz</option>
-                {Object.keys(CATEGORIES).map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block font-semibold mb-1">
-                Alt Kategori <span className="text-red-600">*</span>
-              </label>
-              <select
-                value={subCategory}
-                onChange={(e) => setSubCategory(e.target.value)}
-                disabled={!subOptions.length}
-                className="w-full border rounded-lg px-3 py-2 disabled:bg-gray-100"
-              >
-                <option value="">Seçiniz</option>
-                {subOptions.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+         {/* Kategoriler */}
+<div
+  className={`grid grid-cols-1 gap-4 ${
+    category === "Etkinlik Paketleri" ? "md:grid-cols-3" : "md:grid-cols-2"
+  }`}
+>
+  {/* Ana Kategori */}
+  <div>
+    <label className="block font-semibold mb-1">
+      Ana Kategori <span className="text-red-600">*</span>
+    </label>
+
+    <select
+      value={category}
+      onChange={(e) => {
+        setCategory(e.target.value);
+        setEventMainCategory(""); // kategori değişince etkinlik üst kategori sıfırla
+        setSubCategory(""); // alt kategori sıfırla
+      }}
+      className="w-full border rounded-lg px-3 py-2"
+    >
+      <option value="">Seçiniz</option>
+      {Object.keys(CATEGORIES).map((c) => (
+        <option key={c} value={c}>
+          {c}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  {/* Etkinlik Üst Kategorisi (Sadece Etkinlik Paketleri seçilince) */}
+  {category === "Etkinlik Paketleri" && (
+    <div>
+      <label className="block font-semibold mb-1">
+        Etkinlik Üst Kategorisi <span className="text-red-600">*</span>
+      </label>
+
+      <select
+        value={eventMainCategory}
+        onChange={(e) => {
+          setEventMainCategory(e.target.value);
+          setSubCategory(""); // üst kategori değişince alt kategori sıfırla
+        }}
+        className="w-full border rounded-lg px-3 py-2"
+      >
+        <option value="">Seçiniz</option>
+        <option value="Festival & Konser">Festival & Konser</option>
+        <option value="Workshop & Eğitim">Workshop & Eğitim</option>
+        <option value="Spor Etkinlikleri">Spor Etkinlikleri</option>
+        <option value="Sahne & Gösteri Sanatları">Sahne & Gösteri Sanatları</option>
+        <option value="Deneyim & Aktivite">Deneyim & Aktivite</option>
+        <option value="Aile & Çocuk Etkinlikleri">Aile & Çocuk Etkinlikleri</option>
+        <option value="Business & Networking">Business & Networking</option>
+      </select>
+    </div>
+  )}
+
+  {/* Alt Kategori */}
+  <div>
+    <label className="block font-semibold mb-1">
+      Alt Kategori <span className="text-red-600">*</span>
+    </label>
+
+    <select
+      value={subCategory}
+      onChange={(e) => setSubCategory(e.target.value)}
+      disabled={
+        category === "Etkinlik Paketleri"
+          ? !eventMainCategory // etkinlikte üst kategori seçilmeden kilitli
+          : !subOptions.length // diğerlerinde normal
+      }
+      className="w-full border rounded-lg px-3 py-2 disabled:bg-gray-100"
+    >
+      <option value="">Seçiniz</option>
+      {subOptions.map((s) => (
+        <option key={s} value={s}>
+          {s}
+        </option>
+      ))}
+    </select>
+  </div>
+</div>
+
 
           {/* Başlık & Açıklama */}
           <div>
@@ -879,142 +1013,207 @@ const nights = useMemo(() => {
 </label>
 
   <input
-    type="number"
-    min={0}
-    value={orjinalFiyat}
-    onChange={(e) => setOrjinalFiyat(e.target.value)}
-    className="w-full border rounded-lg px-3 py-2"
-    placeholder="Örn: 10000"
-  />
+  type="text"
+  inputMode="numeric"
+  value={formatWithComma(orjinalFiyat)}
+  onChange={(e) => setOrjinalFiyat(onlyNumbers(e.target.value))}
+  className="w-full border rounded-lg px-3 py-2"
+  placeholder="Örn: 15,000"
+/>
   <p className="text-xs text-gray-500 mt-1">
     Bu alan satın aldığın gerçek fiyat içindir. İndirimi otomatik hesaplamak için kullanılır.
   </p>
 </div>
 
           {/* Fiyat */}
-          <div>
-            <label className="block font-semibold mb-1">
-              Satış Fiyatı (₺) <span className="text-red-600">*</span>
-            </label>
-            <input
-              type="number"
-              min={0}
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2"
-            />
-            <p className="text-xs text-gray-500 mt-1">Satış fiyatı, ödediğiniz tutarın üzerinde olamaz.</p>
-          </div>
+         <div>
+  <label className="block font-semibold mb-1">
+    Satış Fiyatı (₺) <span className="text-red-600">*</span>
+  </label>
+
+  <input
+    type="text"
+    inputMode="numeric"
+    value={formatWithComma(price)}
+    onChange={(e) => {
+      const raw = onlyNumbers(e.target.value);
+      setPrice(raw);
+    }}
+    className="w-full border rounded-lg px-3 py-2"
+    placeholder="Örn: 10,000"
+  />
+
+  <p className="text-xs text-gray-500 mt-1">
+    Satış fiyatı, ödediğiniz tutarın üzerinde olamaz.
+  </p>
+</div>
 
           {/* Ücretli Özellikler */}
           <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <label className="inline-flex items-center justify-between gap-2 border rounded-lg px-3 py-2 bg-gray-50">
               <div className="flex items-center gap-2">
                 <input type="checkbox" checked={oneCikar} onChange={(e) => setOneCikar(e.target.checked)} />
-                <span>Öne Çıkar</span>
+                <span>{plan.boosts.categoryFeatured.label}</span>
               </div>
-              <span className="text-sm text-gray-600 font-medium">+40 ₺</span>
+            <span className="text-sm text-gray-600 font-medium">+{boostCategoryFeatured} ₺</span>
             </label>
 
             <label className="inline-flex items-center justify-between gap-2 border rounded-lg px-3 py-2 bg-gray-50">
               <div className="flex items-center gap-2">
                 <input type="checkbox" checked={vitrin} onChange={(e) => setVitrin(e.target.checked)} />
-                <span>Vitrinde Göster</span>
+                <span>{plan.boosts.homeVitrin.label}</span>
               </div>
-              <span className="text-sm text-gray-600 font-medium">+60 ₺</span>
+              <span className="text-sm text-gray-600 font-medium">+{boostHomeVitrin} ₺</span>
             </label>
 
             <label className="inline-flex items-center justify-between gap-2 border rounded-lg px-3 py-2 bg-gray-50">
               <div className="flex items-center gap-2">
                 <input type="checkbox" checked={kalinYazi} onChange={(e) => setKalinYazi(e.target.checked)} />
-                <span>Başlık Kalın Göster</span>
+                <span>{plan.boosts.boldTitle.label}</span>
               </div>
-              <span className="text-sm text-gray-600 font-medium">+20 ₺</span>
+              <span className="text-sm text-gray-600 font-medium">+{boostBoldTitle} ₺</span>
             </label>
           </section>
 
           {/* 🔹 Fiyatlandırma Bilgileri Paneli */}
-          <div className="mt-6 border-t pt-4">
-            <button
-              type="button"
-              onClick={() => setShowPricing((prev) => !prev)}
-              className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-lg transition"
-            >
-              {showPricing ? "▲ Fiyatlandırmayı Gizle" : "💰 Fiyatlandırmayı Gör"}
-            </button>
+<div className="mt-6 border-t pt-4">
+  <button
+    type="button"
+    onClick={() => setShowPricing((prev) => !prev)}
+    className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-lg transition"
+  >
+    {showPricing ? "▲ Fiyatlandırmayı Gizle" : "💰 Fiyatlandırmayı Gör"}
+  </button>
 
-            {showPricing && (
-              <div className="mt-4 bg-white border rounded-lg shadow-inner p-4 space-y-2 text-sm text-gray-700">
-                <p className="font-semibold text-lg text-blue-700">💡 İlan Yayın Paketleri</p>
+  {showPricing && (
+    <div className="mt-4 bg-white border rounded-lg shadow-inner p-4 space-y-3 text-sm text-gray-700">
+      <p className="font-semibold text-lg text-blue-700">💡 İlan Yayın Paketleri</p>
 
-                <p className="mt-2 font-semibold">⭐ Yeni Üyeye Özel: İlk İlan Kampanyası</p>
-                <ul className="list-disc ml-5">
-                  <li>Fiyat: Ücretsiz</li>
-                  <li>Süre: 15 gün</li>
-                  <li>Not: Yeni üyeler için yalnızca bir defaya mahsus kullanılabilir.</li>
-                </ul>
+      {/* İlk ilan kampanyası */}
+      <div className="border rounded-lg p-3 bg-gray-50">
+        <p className="font-semibold">⭐ Yeni Üyeye Özel: İlk İlan Kampanyası</p>
+        <ul className="list-disc ml-5 mt-2 space-y-1">
+          <li>Fiyat: Ücretsiz</li>
+          <li>
+            Süre: <b>{plan.freeDays} gün</b>
+          </li>
+          <li>Not: Yeni üyeler için yalnızca bir defaya mahsus kullanılabilir.</li>
+        </ul>
+      </div>
 
-                <p className="mt-3 font-semibold">📦 Standart İlan</p>
-                <ul className="list-disc ml-5">
-                  <li>Fiyat: 350 TL</li>
-                  <li>Süre: 30 gün</li>
-                  <li>Normal sıralama, otomatik süresi doldu uyarısı, manuel yenileme hakkı.</li>
-                </ul>
+      {/* Standart paket (kategoriye göre değişir) */}
+      <div className="border rounded-lg p-3 bg-white">
+        <p className="font-semibold">
+          {isEvent ? "🎟️ Etkinlik İlanı" : "📦 Standart İlan"}
+        </p>
+        <ul className="list-disc ml-5 mt-2 space-y-1">
+          <li>
+            İlk <b>{plan.freeDays} gün</b> ücretsiz
+          </li>
+          <li>
+            Sonrasında 1 aylık ilan fiyatı: <b>{plan.monthlyPrice} TL</b>
+          </li>
+          <li>Süre: <b>30 gün</b></li>
+        </ul>
 
-                <p className="mt-3 font-semibold">🏆 Ekstra Özellikler</p>
-                <ul className="list-disc ml-5">
-                  <li>Öne Çıkar: +40 TL</li>
-                  <li>Vitrinde Göster: +60 TL</li>
-                  <li>Başlık Kalın Göster: +20 TL</li>
-                </ul>
+        <p className="mt-2 text-xs text-gray-600">
+          {isFirstListing
+            ? "🎉 İlk ilanınız ücretsizdir. Ek özellik seçerseniz sadece onların ücretini ödersiniz."
+            : `ℹ️ Bu ikinci veya sonraki ilanınız. Standart ilan ücreti (${plan.monthlyPrice} TL) + seçtiğiniz ek özellikler uygulanır.`}
+        </p>
+      </div>
 
-                <p className="mt-3">🧾 <b>KDV Oranı:</b> %20</p>
-                <p>💳 Toplam tutar ilan sırasında otomatik hesaplanır.</p>
+      {/* Ekstra boostlar */}
+      <div className="border rounded-lg p-3 bg-white">
+        <p className="font-semibold">🏆 Extra Boost Fiyatlandırma (30 gün)</p>
+        <ul className="list-disc ml-5 mt-2 space-y-1">
+          <li>
+            {plan.boosts.categoryFeatured.label}: <b>{boostCategoryFeatured} TL</b>
+          </li>
+          <li>
+            {plan.boosts.homeVitrin.label}: <b>{boostHomeVitrin} TL</b>
+          </li>
+          <li>
+            {plan.boosts.boldTitle.label}: <b>{boostBoldTitle} TL</b>
+          </li>
+        </ul>
+      </div>
 
-                <p className="mt-3 text-xs text-gray-600">
-                  💬 %30–%40 arası indirimli ilanlar “Muhteşem İlanlar”; %40 ve üzeri indirimli ilanlar “Efsane İlanlar”
-                  bölümünde ücretsiz öne çıkarılır.
-                </p>
-              </div>
-            )}
-          </div>
+      <div className="text-xs text-gray-600 border-t pt-2 space-y-1">
+        <p>
+          🧾 <b>KDV Oranı:</b> %20
+        </p>
+        <p>💳 Toplam tutar ilan sırasında otomatik hesaplanır.</p>
+        <p>
+          💬 %30–%40 arası indirimli ilanlar “Muhteşem İlanlar”; %40 ve üzeri
+          indirimli ilanlar “Efsane İlanlar” bölümünde ücretsiz öne çıkarılır.
+        </p>
+      </div>
+    </div>
+  )}
+</div>
 
           {/* 🔹 Ücretli Özellikler Sepet Özeti */}
-          {(oneCikar || vitrin || kalinYazi || !isFirstListing) && (
-            <div className="mt-6 border rounded-xl bg-amber-50 p-4 shadow-md">
-              <h3 className="font-bold text-lg text-gray-800 mb-2">🧾 Sepet Özeti</h3>
+{(oneCikar || vitrin || kalinYazi || !isFirstListing) && (
+  <div className="mt-6 border rounded-xl bg-amber-50 p-4 shadow-md">
+    <h3 className="font-bold text-lg text-gray-800 mb-2">🧾 Sepet Özeti</h3>
 
-              <p className="text-sm text-blue-700 font-medium mb-3">
-                {isFirstListing
-                  ? "🎉 İlk ilanınız ücretsizdir. Ek özellik seçerseniz sadece onların ücretini ödersiniz."
-                  : "ℹ️ Bu ikinci veya sonraki ilanınız. Standart ilan ücreti (350 ₺) + seçtiğiniz ek özellikler uygulanır."}
-              </p>
+    <p className="text-sm text-blue-700 font-medium mb-3">
+      {isFirstListing
+        ? `🎉 İlk ilanınız ücretsizdir. Ek özellik seçerseniz sadece onların ücretini ödersiniz.`
+        : `ℹ️ Bu ikinci veya sonraki ilanınız. Standart ilan ücreti (${plan.monthlyPrice} ₺) + seçtiğiniz ek özellikler uygulanır.`}
+    </p>
 
-              <ul className="text-sm text-gray-700 space-y-1">
-                {!isFirstListing && <li>• Standart İlan Ücreti: 350 ₺</li>}
-                {oneCikar && <li>• Öne Çıkar: +40 ₺</li>}
-                {vitrin && <li>• Vitrinde Göster: +60 ₺</li>}
-                {kalinYazi && <li>• Başlık Kalın Göster: +20 ₺</li>}
-              </ul>
+    <ul className="text-sm text-gray-700 space-y-1">
+      {!isFirstListing && (
+        <li>• Standart İlan Ücreti: {plan.monthlyPrice} ₺</li>
+      )}
 
-              {(() => {
-                const base = isFirstListing ? 0 : 350;
-                const extra = (oneCikar ? 40 : 0) + (vitrin ? 60 : 0) + (kalinYazi ? 20 : 0);
-                const subtotal = base + extra;
-                const kdv = subtotal * 0.2;
-                const total = subtotal + kdv;
+      {oneCikar && (
+        <li>
+          • {plan.boosts.categoryFeatured.label}: +{boostCategoryFeatured} ₺
+        </li>
+      )}
 
-                return (
-                  <div className="mt-3 border-t pt-2 text-right text-sm text-gray-800">
-                    <p>KDV (%20): <b>{kdv.toFixed(2)} ₺</b></p>
-                    <p className="text-lg font-semibold text-blue-700">Toplam: {total.toFixed(2)} ₺</p>
+      {vitrin && (
+        <li>
+          • {plan.boosts.homeVitrin.label}: +{boostHomeVitrin} ₺
+        </li>
+      )}
 
-                
-                  </div>
-                );
-              })()}
-            </div>
-          )}
+      {kalinYazi && (
+        <li>
+          • {plan.boosts.boldTitle.label}: +{boostBoldTitle} ₺
+        </li>
+      )}
+    </ul>
+
+    {(() => {
+      const base = isFirstListing ? 0 : plan.monthlyPrice;
+
+      const extra =
+        (oneCikar ? boostCategoryFeatured : 0) +
+        (vitrin ? boostHomeVitrin : 0) +
+        (kalinYazi ? boostBoldTitle : 0);
+
+      const subtotal = base + extra;
+      const kdv = subtotal * 0.2;
+      const total = subtotal + kdv;
+
+      return (
+        <div className="mt-3 border-t pt-2 text-right text-sm text-gray-800">
+          <p>
+            KDV (%20): <b>{kdv.toFixed(2)} ₺</b>
+          </p>
+          <p className="text-lg font-semibold text-blue-700">
+            Toplam: {total.toFixed(2)} ₺
+          </p>
+        </div>
+      );
+    })()}
+  </div>
+)}
+
 
           {/* KVKK */}
           <div>
