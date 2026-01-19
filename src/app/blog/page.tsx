@@ -23,6 +23,7 @@ export default function BlogPage() {
                   className="w-full h-full object-cover"
                 />
               </div>
+
               <div className="p-4">
                 <div className="font-semibold text-gray-900 line-clamp-2">
                   {p.title}
