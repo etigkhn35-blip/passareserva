@@ -70,7 +70,7 @@ const DEFAULT_IMAGES: Record<string, string> = {
   "Tiyatro": "/defaults/etkinlik-tiyatro.jpg",
   "Müzikal": "/defaults/etkinlik-muzikal.jpg",
   "Opera & Bale": "/defaults/etkinlik-opera-bale.jpg",
-  "Stand-up": "/defaults/etkinlik-standup.jpg",
+  "Stand-up": "/defaults/etkinlik-stand-up.jpg",
   "Gösteriler": "/defaults/etkinlik-gosteri.jpg",
 
   "Dalış / Yelken Eğitimi": "/defaults/etkinlik-dalis-yelken.jpg",
@@ -698,28 +698,40 @@ export default function HomePage() {
       const snap = await getDocs(q);
 
       const data = snap.docs.map((d) => {
-        const doc = d.data() as any;
+  const doc = d.data() as any;
 
-        const ucret = doc.ucret || 0;
-        const orjinal = doc.orjinalFiyat || doc.originalPrice || ucret;
-        const indirim =
-          orjinal > 0 ? Math.round(((orjinal - ucret) / orjinal) * 100) : 0;
+  const sub = doc.altKategori || doc.kategori || "Genel";
 
-        return {
-          id: d.id,
-          title: doc.baslik || "İsimsiz İlan",
-          location: `${doc.il || ""} ${doc.ilce || ""}`.trim(),
-          price: ucret,
-          cover:
-            doc.coverUrl ||
-            DEFAULT_IMAGES[doc.altKategori || doc.kategori || "Genel"],
-          category: doc.altKategori || doc.kategori,
-          isFake: false,
-          indirim,
-          anasayfaVitrin: Boolean(doc.anasayfaVitrin),
-          bitisTarihi: doc.cikisTarihi ? new Date(doc.cikisTarihi + "T00:00:00") : null
-        };
-      });
+  const isDefaultCover =
+    typeof doc.coverUrl === "string" && doc.coverUrl.startsWith("/defaults/");
+
+  const ucret = doc.ucret || 0;
+  const orjinal = doc.orjinalFiyat || doc.originalPrice || ucret;
+  const indirim =
+    orjinal > 0 ? Math.round(((orjinal - ucret) / orjinal) * 100) : 0;
+
+  return {
+    id: d.id,
+    title: doc.baslik || "İsimsiz İlan",
+    location: `${doc.il || ""} ${doc.ilce || ""}`.trim(),
+    price: ucret,
+
+    cover:
+      !doc.coverUrl || isDefaultCover
+        ? DEFAULT_IMAGES[sub] || DEFAULT_IMAGES["Genel"]
+        : doc.coverUrl,
+
+    category: sub,
+    isFake: false,
+    indirim,
+    anasayfaVitrin: Boolean(doc.anasayfaVitrin),
+
+    bitisTarihi: doc.cikisTarihi
+      ? new Date(doc.cikisTarihi + "T00:00:00")
+      : null,
+  };
+});
+
 
 
       /* 🔥 EFSANE (%40+) */
