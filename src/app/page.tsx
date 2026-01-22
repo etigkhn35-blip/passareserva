@@ -700,15 +700,14 @@ export default function HomePage() {
       const data = snap.docs.map((d) => {
   const doc = d.data() as any;
 
-  const sub = doc.altKategori || doc.kategori || "Genel";
-
-  const isDefaultCover =
-    typeof doc.coverUrl === "string" && doc.coverUrl.startsWith("/defaults/");
-
   const ucret = doc.ucret || 0;
   const orjinal = doc.orjinalFiyat || doc.originalPrice || ucret;
   const indirim =
     orjinal > 0 ? Math.round(((orjinal - ucret) / orjinal) * 100) : 0;
+
+  const kategori = (doc.altKategori || doc.kategori || "Genel")
+    .toString()
+    .trim();
 
   return {
     id: d.id,
@@ -716,12 +715,9 @@ export default function HomePage() {
     location: `${doc.il || ""} ${doc.ilce || ""}`.trim(),
     price: ucret,
 
-    cover:
-      !doc.coverUrl || isDefaultCover
-        ? DEFAULT_IMAGES[sub] || DEFAULT_IMAGES["Genel"]
-        : doc.coverUrl,
+    cover: doc.coverUrl || DEFAULT_IMAGES[kategori] || DEFAULT_IMAGES["Genel"],
 
-    category: sub,
+    category: kategori,
     isFake: false,
     indirim,
     anasayfaVitrin: Boolean(doc.anasayfaVitrin),
@@ -731,6 +727,7 @@ export default function HomePage() {
       : null,
   };
 });
+
 
 
 
