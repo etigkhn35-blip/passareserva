@@ -49,6 +49,25 @@ type Ilan = {
   ozelAlanlar?: Record<string, string | number | boolean | null | undefined>;
 };
 
+
+
+function maskLastName(fullName?: string) {
+  if (!fullName) return "";
+
+  const parts = fullName
+    .trim()
+    .split(" ")
+    .filter(Boolean);
+
+  if (parts.length === 1) return parts[0];
+
+  const firstName = parts[0];
+  const lastName = parts[parts.length - 1];
+
+  return `${firstName} ${lastName[0].toUpperCase()}.`;
+}
+
+
 const defaultImage = "/defaults/default.jpg";
 
 export default function IlanDetayPage() {
@@ -421,7 +440,11 @@ const kategoriText = [ilan.kategori, ilan.altKategori]
               </h3>
               <p className="text-sm text-gray-500">
                 İlan Sahibi:{" "}
-                <b>{ilan.adSoyad || ilan.sahipEmail?.split("@")[0]}</b>
+              <b>
+  {ilan.adSoyad
+    ? maskLastName(ilan.adSoyad)
+    : ilan.sahipEmail?.split("@")[0]}
+</b>  
               </p>
             </div>
 

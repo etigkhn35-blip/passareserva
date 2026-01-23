@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { auth, db, storage } from "@/lib/firebaseConfig";
-import { addDoc, collection, getDocs, query, where, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, getDocs, query, where, serverTimestamp, doc, getDoc, setDoc, } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useRouter } from "next/navigation";
 import { CATEGORY_FIELDS } from "@/data/categoryFields";
 import { PRICING, isEventCategory, EVENT_SUBCATEGORIES } from "@/lib/pricing";
+import { Timestamp } from "firebase/firestore";
+import { ol } from "framer-motion/client";
 
 
 
@@ -206,6 +208,10 @@ export default function IlanVerPage() {
 
   /* ------------------------------- State ------------------------------- */
   const [user, setUser] = useState<any>(auth.currentUser);
+  const [il, setIl] = useState("");
+const [ilce, setIlce] = useState("");
+const [mahalle, setMahalle] = useState("");
+
 
   // Kategoriler
   const [category, setCategory] = useState("");
@@ -313,20 +319,25 @@ useEffect(() => {
 
 /* 🟦 Kullanıcının ilk ilanı mı? — BURADA KONTROL EDİYORUZ */
 useEffect(() => {
+
   if (!user?.uid) return;
 
-  const q = query(
-    collection(db, "ilanlar"),
-    where("sahipUid", "==", user.uid)
-  );
+  const checkFirstListing = async () => {
+    try {
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
 
-  getDocs(q).then((snap) => {
-    if (snap.size > 0) {
+      const used = userSnap.exists() ? Boolean(userSnap.data()?.ilkIlanKullanildi) : false;
+
+      setIsFirstListing(!used);
+    } catch (err) {
+      console.error("ilk ilan kontrol hatası:", err);
+      // hata olursa güvenli tarafta kalalım
       setIsFirstListing(false);
-    } else {
-      setIsFirstListing(true);
     }
-  });
+  };
+
+  checkFirstListing();
 }, [user]);
 
 /* Alt kategori seçeneklerini güncelle */
@@ -400,6 +411,9 @@ const nights = useMemo(() => {
     if (category === "Konaklama" && !pansiyonTipi) return "⚠️ Pansiyon tipi seçilmedi.";
     if (category === "Konaklama" && !odaTipi) return "⚠️ Oda tipi seçilmedi.";
     if (!kvkkOnay) return "⚠️ KVKK onayı verilmedi.";
+    if (!il.trim()) return "⚠️ İl zorunludur.";
+    if (!ilce.trim()) return "⚠️ İlçe zorunludur.";
+    if (!mahalle.trim()) return "⚠️ Mahalle / Semt zorunludur.";
     if (!reservationFile) return "⚠️ Ödeme/rezervasyon belgesi (PDF/JPG) yükleyin.";
     return "";
   };
@@ -427,6 +441,8 @@ const nights = useMemo(() => {
       return;
     }
 
+    
+
     // Ücretli özellik seçildiyse önce ödeme akışına yönlendir
     if (oneCikar || vitrin || kalinYazi || !isFirstListing) {
   // İlanı hemen veritabanına kaydediyoruz, sonra ödeme adımına yönlendiriyoruz.
@@ -453,6 +469,10 @@ const nights = useMemo(() => {
   }
 
   const autoCoverUrl = coverUrl ?? getDefaultCover(category, subCategory);
+  const days = isFirstListing ? 15 : 30;
+const endDate = Timestamp.fromDate(
+  new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+);
 
   const docRef = await addDoc(collection(db, "ilanlar"), {
     ilanNo,
@@ -465,6 +485,11 @@ const nights = useMemo(() => {
     altKategori: subCategory,
     girisTarihi: checkIn,
     cikisTarihi: checkOut,
+
+    il: il.trim(),
+    ilce: ilce.trim(),
+    mahalle: mahalle.trim(),
+
     geceSayisi: nights,
     yetiskinSayisi: adults,
     cocukSayisi: children,
@@ -481,8 +506,23 @@ const nights = useMemo(() => {
     kalinYazi,
     kvkkOnay: Boolean(kvkkOnay),
     status: "pending",
+    baslangicTarihi: Timestamp.now(),
     olusturmaTarihi: serverTimestamp(),
+    bitisTarihi: endDate,
+    paketTipi: isFirstListing ? "free" : "paid",
+    
   });
+
+  if (isFirstListing && user?.uid) {
+  await setDoc(
+    doc(db, "users", user.uid),
+    { ilkIlanKullanildi: true },
+    { merge: true }
+  );
+}
+
+  
+ 
 
   const base = isFirstListing ? 0 : 350;
   const url = `/odeme?ilanId=${docRef.id}&mode=publish&base=${base}&one=${oneCikar ? 40 : 0}&vit=${vitrin ? 60 : 0}&bold=${kalinYazi ? 20 : 0}`;
@@ -530,8 +570,10 @@ const nights = useMemo(() => {
         kategori: category,
         altKategori: subCategory,
 
-        // ⚠️ Konum alanları kullanıcı isteğiyle kaldırıldı:
-        // il, ilce, mahalle YOK
+         il: il.trim(),
+         ilce: ilce.trim(),
+         mahalle: mahalle.trim(),
+
 
         girisTarihi: checkIn,
         cikisTarihi: checkOut,
@@ -776,6 +818,48 @@ const nights = useMemo(() => {
               className="w-full border rounded-lg px-3 py-2 bg-gray-100"
             />
           </div>
+
+          {/* Konum Bilgileri */}
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div>
+    <label className="block font-semibold mb-1">
+      İl <span className="text-red-600">*</span>
+    </label>
+    <input
+      value={il}
+      onChange={(e) => setIl(e.target.value)}
+      placeholder="Örn: İzmir"
+      className="w-full border rounded-lg px-3 py-2"
+      required
+    />
+  </div>
+
+  <div>
+    <label className="block font-semibold mb-1">
+      İlçe <span className="text-red-600">*</span>
+    </label>
+    <input
+      value={ilce}
+      onChange={(e) => setIlce(e.target.value)}
+      placeholder="Örn: Konak"
+      className="w-full border rounded-lg px-3 py-2"
+      required
+    />
+  </div>
+
+  <div>
+    <label className="block font-semibold mb-1">
+      Mahalle / Semt <span className="text-red-600">*</span>
+    </label>
+    <input
+      value={mahalle}
+      onChange={(e) => setMahalle(e.target.value)}
+      placeholder="Örn: Alsancak"
+      className="w-full border rounded-lg px-3 py-2"
+      required
+    />
+  </div>
+</div>
 
          {/* Kategoriler */}
 <div
@@ -1189,7 +1273,7 @@ const nights = useMemo(() => {
     </ul>
 
     {(() => {
-      const base = isFirstListing ? 0 : plan.monthlyPrice;
+      const base = isFirstListing ? 0 : 350;
 
       const extra =
         (oneCikar ? boostCategoryFeatured : 0) +
