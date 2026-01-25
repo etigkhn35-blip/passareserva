@@ -7,6 +7,7 @@ import { db } from "@/lib/firebaseConfig";
 import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
 import { AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 
 /* ----------------------------- TİP TANIMLARI ---------------------------- */
 type Card = {
@@ -299,11 +300,12 @@ function VitrinCard({ item }: { item: Card }) {
     >
       {/* Kartlar daha küçük olsun diye oranı biraz genişlettik */}
       <div className="aspect-[16/11] w-full overflow-hidden bg-gray-100 relative">
-        <img
-          src={imageSrc}
-          alt={item.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition"
-        />
+       <img
+            src={imageSrc}
+            alt={item.title}
+           className="w-full h-full object-cover"
+           style={{ imageRendering: "auto" }}
+           />
 
         {/* 🔹 Süre rozeti (SADECE gerçek ilanlarda) */}
         {!item.isFake && <TimeBadge bitisTarihi={(item as any).bitisTarihi} />}
@@ -548,56 +550,56 @@ type BlogPost = { title: string; desc: string; href: string; img: string };
 function BlogSection() {
   const posts: BlogPost[] = [
   {
-    title: "Tatilini Devretmek Güvenli mi? 7 İpucu",
-    desc: "Devir sürecinde dikkat etmen gereken kritik noktalar.",
+    title: "TatiliniDevret Nedir? Nasıl Çalışır?",
+    desc: "Kullanılmayan tatiller nasıl paraya dönüşür? Tatil devri rehberi.",
     href: "/blog/1",
     img: "/images/blog-1.jpg",
   },
   {
-    title: "Erken Rezervasyon İptalinde Para Nasıl Kurtarılır?",
-    desc: "İptal koşulları + alternatif çözümler.",
+    title: "Otel Rezervasyonu Devri Nasıl Yapılır?",
+    desc: "Otel iptal etmiyorsa rezervasyonunu devrederek paranı kurtar.",
     href: "/blog/2",
     img: "/images/blog-2.jpg",
   },
   {
-    title: "Villa, Otel, Bungalow: Hangisi Daha Avantajlı?",
-    desc: "Bütçe ve deneyime göre doğru seçimi yap.",
+    title: "Tekne Tatili ve Mavi Yolculuk Devri Nedir?",
+    desc: "Gulet ve yat rezervasyonlarını devrederek tatilinin yanmasını önle.",
     href: "/blog/3",
     img: "/images/blog-3.jpg",
   },
   {
-    title: "Tatil Devrinde Sözleşme Şartları",
-    desc: "Alıcı & satıcı için kritik maddeler.",
-    href: "/blog",
+    title: "Villa, Airbnb ve Booking Rezervasyonu Devredilir mi?",
+    desc: "Gidemiyorsan rezervasyonunu devret, paran yanmasın.",
+    href: "/blog/4",
     img: "/images/blog-4.jpg",
   },
   {
-    title: "Bütçe Dostu Tatil Tüyoları",
-    desc: "İndirimli ilanları doğru zamanda yakala.",
+    title: "Tur ve Gezi Paketleri Devri Nedir?",
+    desc: "Tur iptal edilemiyorsa devret, ödediğin paranın çoğunu geri al.",
     href: "/blog/5",
     img: "/images/blog-5.jpg",
   },
   {
-    title: "Dolandırıcılığa Karşı 9 Güvenlik Kontrolü",
-    desc: "Ödeme ve kimlik süreçlerinde dikkat.",
+    title: "Konser, Festival ve Etkinlik Bileti Devri Nedir?",
+    desc: "Etkinliğe gidemiyorsan biletin yanmasın, devrederek kurtar.",
     href: "/blog/6",
     img: "/images/blog-6.jpg",
   },
   {
-    title: "Tatil Devri Nedir? Yeni Nesil Tatil",
-    desc: "Kullanılmayan rezervasyonları değerlendirme rehberi.",
+    title: "Workshop, Eğitim ve Atölye Biletleri Nasıl Devredilir?",
+    desc: "Katılamıyorsan devret, kontenjan boşa gitmesin paran yanmasın.",
     href: "/blog/7",
     img: "/images/blog-7.jpg",
   },
   {
-    title: "Konaklama Devirlerinde Sık Yapılan Hatalar",
-    desc: "Bu hatalardan kaçın, paran boşa gitmesin.",
+    title: "Etkinliğe Son Günler Kala Ne Yapmalı?",
+    desc: "Son dakika devri + boost ile ilanını öne çıkar, satışını hızlandır.",
     href: "/blog/8",
     img: "/images/blog-8.jpg",
   },
   {
-    title: "Tatilini Devretmenin Avantajları",
-    desc: "Hem alıcı hem satıcı için kazan-kazan modeli.",
+    title: "Tatilini Devretmek Güvenli mi?",
+    desc: "Dolandırıcılıktan korunmak için güvenli tatil devri rehberi.",
     href: "/blog/9",
     img: "/images/blog-9.jpg",
   },
@@ -631,29 +633,39 @@ function BlogSection() {
       <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
         <div className="relative overflow-hidden">
           <div
-            className="flex transition-transform duration-700 ease-in-out"
+            className="flex transition-transform duration-700 ease-in-out will-change-transform"
             style={{ transform: `translateX(-${page * 100}%)` }}
           >
+            
             {pages.map((group, idx) => (
               <div key={idx} className="min-w-full p-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {group.map((p) => (
-                    <Link
-                      key={p.title}
-                      href={p.href}
-                      className="border border-gray-200 rounded-xl overflow-hidden bg-white hover:shadow-md transition block"
-                    >
-                      <div className="h-36 w-full bg-gray-100 overflow-hidden">
-                        <img src={p.img} alt={p.title} className="w-full h-full object-cover" />
-                      </div>
-                      <div className="p-3">
-                        <div className="font-semibold text-gray-900 line-clamp-2 text-sm">
-                          {p.title}
-                        </div>
-                        <div className="text-xs text-gray-600 mt-1 line-clamp-2">{p.desc}</div>
-                      </div>
-                    </Link>
-                  ))}
+               {group.map((p) => (
+  <Link
+    key={p.title}
+    href={p.href}
+    className="border border-gray-200 rounded-xl overflow-hidden bg-white hover:shadow-md transition block"
+  >
+    <div className="relative h-36 w-full bg-gray-100 overflow-hidden">
+      <Image
+        src={p.img}
+        alt={p.title}
+        fill
+        quality={100}
+        priority
+        sizes="(max-width: 768px) 100vw, 33vw"
+        className="object-cover"
+      />
+    </div>
+
+    <div className="p-3">
+      <div className="font-semibold text-gray-900 line-clamp-2 text-sm">
+        {p.title}
+      </div>
+      <div className="text-xs text-gray-600 mt-1 line-clamp-2">{p.desc}</div>
+    </div>
+  </Link>
+))}
                 </div>
               </div>
             ))}
