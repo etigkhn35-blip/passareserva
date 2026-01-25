@@ -3,7 +3,7 @@
 import MobileTopbar from "./MobileTopBar";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth, db } from "../lib/firebaseConfig";
 import {
@@ -29,6 +29,7 @@ interface NotificationDoc extends DocumentData {
   type?: string;
   toUserUid?: string;
   ilanId?: string;
+  path?: string;
 }
 
 export default function Header() {
@@ -49,6 +50,11 @@ export default function Header() {
 
   const [mobileMenu, setMobileMenu] = useState(false);
 
+  // 🔊 Bildirim sesi
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const firstLoadRef = useRef(true);
+  const prevUnreadRef = useRef(0);
+
   // 🔍 Arama
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,78 +65,131 @@ export default function Header() {
 
   // 👤 Auth
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (currentUser) => setUser(currentUser));
+    const unsubAuth = onAuthStateChanged(auth, (currentUser) =>
+      setUser(currentUser)
+    );
     return () => unsubAuth();
   }, []);
 
   // 💬 Mesaj bildirim sayısı
   useEffect(() => {
     if (!user) return;
+
     const q = query(
-      collection(db, "notifications"),
-      where("toUserUid", "==", user.uid),
+      collection(db, "users", user.uid, "notifications"),
       where("type", "==", "message"),
       orderBy("createdAt", "desc"),
       limit(20)
     );
+
     const unsub = onSnapshot(q, (snap) => {
       const list: NotificationDoc[] = snap.docs.map((d) => ({
         ...(d.data() as NotificationDoc),
         id: d.id,
       }));
+
       setUnreadCount(list.filter((n) => !n.read).length);
     });
+
     return () => unsub();
   }, [user]);
 
-  // 🔔 Genel bildirim listesi
+  // 🔔 Genel bildirim listesi + ses
   useEffect(() => {
     if (!user) return;
+
+    // 🔊 Ses dosyasını hazırla
+    if (!audioRef.current) {
+      audioRef.current = new Audio("/sounds/notification.mp3");
+    }
+
     const q = query(
-      collection(db, "notifications"),
-      where("toUserUid", "==", user.uid),
+      collection(db, "users", user.uid, "notifications"),
       orderBy("createdAt", "desc"),
       limit(10)
     );
+
     const unsub = onSnapshot(q, (snap) => {
       const list: NotificationDoc[] = snap.docs.map((d) => ({
         ...(d.data() as NotificationDoc),
         id: d.id,
       }));
+
       setNotifications(list);
-      setNotifCount(list.filter((n) => !n.read).length);
+
+      const unread = list.filter((n) => !n.read).length;
+      setNotifCount(unread);
+
+      // ✅ İlk yüklemede ses çalma
+      if (firstLoadRef.current) {
+        firstLoadRef.current = false;
+        prevUnreadRef.current = unread;
+        return;
+      }
+
+      // ✅ Yeni bildirim geldiyse çal
+     if (unread > prevUnreadRef.current) {
+  const audio = audioRef.current;
+  if (audio) {
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+  }
+}
+
+      prevUnreadRef.current = unread;
     });
+
     return () => unsub();
   }, [user]);
 
   const handleNotificationClick = async (n: NotificationDoc) => {
-    try {
-      if (!n.id) return;
-      await updateDoc(doc(db, "notifications", n.id), { read: true });
+  if (!user) return;
 
-      if (n.type === "message") {
-        window.location.href = "/hesabim/mesajlar";
-        return;
-      }
+  try {
+    if (!n.id) return;
 
-      if (n.type === "destek") {
-        window.location.href = "/hesabim/mesajlar";
-        return;
-      }
+    // 1) Okundu işaretle
+    await updateDoc(doc(db, "users", user.uid, "notifications", n.id), {
+      read: true,
+    });
 
-      if (n.type === "ilan" || n.type?.startsWith("ilan_")) {
-        window.location.href = n.ilanId ? `/ilan/${encodeURIComponent(n.ilanId)}` : "/hesabim";
-        return;
-      }
-
-      window.location.href = "/hesabim";
-    } catch (e) {
-      console.error("Bildirim tıklama hatası:", e);
-    } finally {
-      setOpenNotif(false);
-      setMobileMenu(false);
+    // 2) Destek yanıtı → Geri Bildirim sayfası
+    if (n.type === "support_reply" || n.type === "destek") {
+      window.location.href = "/hesabim/geri-bildirim";
+      return;
     }
-  };
+
+    // 3) Mesaj bildirimi → Mesajlarım
+    if (n.type === "message") {
+      window.location.href = "/hesabim/mesajlar";
+      return;
+    }
+
+    // 4) İlan bildirimleri → ilan sayfası
+    if (n.type === "ilan" || n.type?.startsWith("ilan_")) {
+      window.location.href = n.ilanId
+        ? `/ilan/${encodeURIComponent(n.ilanId)}`
+        : "/hesabim";
+      return;
+    }
+
+    // 5) Bildirimde path varsa oraya git
+    if (n.path) {
+      window.location.href = n.path;
+      return;
+    }
+
+    // fallback
+    window.location.href = "/hesabim";
+  } catch (e) {
+    console.error("Bildirim tıklama hatası:", e);
+  } finally {
+    setOpenNotif(false);
+    setMobileMenu(false);
+  }
+};
+
+  
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -142,12 +201,9 @@ export default function Header() {
     return user.displayName || user.email?.split("@")[0] || "Kullanıcı";
   }, [user]);
 
-  // ✅ Aynı arama formu (Header state/handler ile)
+  // ✅ Aynı arama formu
   const searchForm = (
-    <form
-  onSubmit={handleSearch}
-  className="flex items-center w-full max-w-2xl"
->
+    <form onSubmit={handleSearch} className="flex items-center w-full max-w-2xl">
       <input
         type="text"
         value={searchTerm}
@@ -165,7 +221,6 @@ export default function Header() {
     </form>
   );
 
-  // ✅ Aynı hamburger butonu (aynı state)
   const menuButton = (
     <button
       onClick={() => setMobileMenu((v) => !v)}
@@ -176,7 +231,6 @@ export default function Header() {
     </button>
   );
 
-  // ✅ Aynı ilan ver butonu (yeni buton yaratmıyoruz, aynı Link)
   const ilanVerButton = (
     <Link
       href="/ilan-ver"
@@ -188,30 +242,24 @@ export default function Header() {
 
   return (
     <>
-      {/* 📱 MOBIL TOPBAR (scroll ile kayar) */}
       <MobileTopbar
         searchForm={searchForm}
         menuButton={menuButton}
         ilanVerButton={ilanVerButton}
       />
 
-      {/* Header: mobilde sticky değil, desktop'ta sticky */}
       <header className="bg-white border-b border-gray-200 shadow-sm md:sticky md:top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          {/* ÜST SATIR */}
           <div className="flex items-center gap-3 justify-center md:justify-between">
-            {/* Logo */}
             <Link href="/" className="text-2xl font-semibold whitespace-nowrap">
               <span style={{ color: "#00AEEF" }}>tatilini</span>
               <span style={{ color: "#FF6B00" }}>devret</span>
             </Link>
 
-            {/* 🔍 Arama: sadece desktop */}
             <div className="hidden md:flex flex-1 justify-center px-6">
-  {searchForm}
-</div>
+              {searchForm}
+            </div>
 
-            {/* Desktop kullanıcı aksiyonları */}
             <div className="hidden md:flex items-center gap-4 text-[13.5px]">
               {!user ? (
                 <>
@@ -235,7 +283,10 @@ export default function Header() {
                     Hesabım
                   </Link>
 
-                  <Link href="/hesabim/mesajlar" className="relative hover:text-[color:#00AEEF]">
+                  <Link
+                    href="/hesabim/mesajlar"
+                    className="relative hover:text-[color:#00AEEF]"
+                  >
                     <Mail className="inline w-5 h-5 mr-1" />
                     Mesajlarım
                     {unreadCount > 0 && (
@@ -265,6 +316,7 @@ export default function Header() {
                         <div className="p-3 border-b font-medium text-gray-700 text-[13px]">
                           Bildirimler
                         </div>
+
                         {notifications.length === 0 ? (
                           <p className="p-4 text-[12.5px] text-gray-500 text-center">
                             Henüz bildiriminiz yok.
@@ -276,16 +328,22 @@ export default function Header() {
                                 key={n.id}
                                 onClick={() => handleNotificationClick(n)}
                                 className={`px-4 py-2 text-[12.5px] border-b cursor-pointer transition ${
-                                  !n.read ? "bg-gray-100 hover:bg-gray-50" : "hover:bg-gray-50"
+                                  !n.read
+                                    ? "bg-gray-100 hover:bg-gray-50"
+                                    : "hover:bg-gray-50"
                                 }`}
                               >
                                 <p className="font-medium text-gray-800">
                                   {n.title || "Yeni bildirim"}
                                 </p>
-                                <p className="text-gray-600 text-sm">{n.message || ""}</p>
+                                <p className="text-gray-600 text-sm">
+                                  {n.message || ""}
+                                </p>
                                 <span className="text-[11px] text-gray-400 block mt-1">
                                   {n.createdAt?.toDate
-                                    ? new Date(n.createdAt.toDate()).toLocaleString("tr-TR")
+                                    ? new Date(
+                                        n.createdAt.toDate()
+                                      ).toLocaleString("tr-TR")
                                     : ""}
                                 </span>
                               </li>
@@ -296,11 +354,13 @@ export default function Header() {
                     )}
                   </div>
 
-                  <button onClick={handleLogout} className="text-red-600 hover:underline">
+                  <button
+                    onClick={handleLogout}
+                    className="text-red-600 hover:underline"
+                  >
                     Çıkış
                   </button>
 
-                  {/* Desktop CTA aynı kalsın */}
                   <Link
                     href="/ilan-ver"
                     className="bg-[color:#FF6B00] text-white px-4 py-2 rounded-lg hover:opacity-90 transition"
@@ -312,17 +372,23 @@ export default function Header() {
             </div>
           </div>
 
-          {/* MOBİL MENÜ (hamburger) */}
+          {/* MOBİL MENÜ */}
           {mobileMenu && (
             <div className="md:hidden mt-3 border border-gray-200 rounded-xl overflow-hidden bg-white">
               <div className="p-3 flex flex-col gap-2 text-sm">
-                <Link href="/detayli-arama" className="px-3 py-2 rounded-lg hover:bg-gray-50">
+                <Link
+                  href="/detayli-arama"
+                  className="px-3 py-2 rounded-lg hover:bg-gray-50"
+                >
                   Detaylı Arama
                 </Link>
 
                 {!user ? (
                   <>
-                    <Link href="/giris" className="px-3 py-2 rounded-lg hover:bg-gray-50">
+                    <Link
+                      href="/giris"
+                      className="px-3 py-2 rounded-lg hover:bg-gray-50"
+                    >
                       Giriş Yap
                     </Link>
                     <Link
@@ -338,7 +404,10 @@ export default function Header() {
                       Hoş geldin, <strong>{displayName}</strong>
                     </div>
 
-                    <Link href="/hesabim" className="px-3 py-2 rounded-lg hover:bg-gray-50">
+                    <Link
+                      href="/hesabim"
+                      className="px-3 py-2 rounded-lg hover:bg-gray-50"
+                    >
                       Hesabım
                     </Link>
 
@@ -389,7 +458,9 @@ export default function Header() {
                                 <div className="font-medium text-gray-900">
                                   {n.title || "Yeni bildirim"}
                                 </div>
-                                <div className="text-gray-600">{n.message || ""}</div>
+                                <div className="text-gray-600">
+                                  {n.message || ""}
+                                </div>
                               </li>
                             ))}
                           </ul>

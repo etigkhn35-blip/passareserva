@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { db } from "@/lib/firebaseConfig";
+import { db, auth } from "@/lib/firebaseConfig";
 import {
   collection,
   query,
@@ -11,16 +11,22 @@ import {
   updateDoc,
   doc,
 } from "firebase/firestore";
-import { auth } from "@/lib/firebaseConfig";
+import { onAuthStateChanged, User } from "firebase/auth";
 import { Bell } from "lucide-react";
 
 export default function NotificationBell() {
+  const [user, setUser] = useState<User | null>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const user = auth.currentUser;
 
-  /* 🔔 Bildirimleri Dinle */
+  // ✅ Auth dinle
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
+    return () => unsub();
+  }, []);
+
+  // 🔔 Bildirimleri Dinle
   useEffect(() => {
     if (!user) return;
 
@@ -33,10 +39,11 @@ export default function NotificationBell() {
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-      const newOnes = list.filter((i: any) => !i.read);
+      // 🔊 yeni unread geldiyse ses çal
+      const newUnread = list.filter((i: any) => !i.read).length;
       const oldUnread = notifications.filter((i: any) => !i.read).length;
 
-      if (newOnes.length > oldUnread) {
+      if (newUnread > oldUnread) {
         audioRef.current?.play().catch(() => {});
       }
 
@@ -44,47 +51,43 @@ export default function NotificationBell() {
     });
 
     return () => unsub();
-  }, [user]);
+  }, [user, notifications]);
 
   const unread = notifications.filter((n) => !n.read).length;
 
-  /* 📌 Bildirime tıklayınca yönlendirme */
   const handleClick = (n: any) => {
-    // 🔗 Eğer bildirimde path varsa → direkt oraya git
     if (n.path) {
       window.location.href = n.path;
       return;
     }
 
-    // 🔗 Chat mesajı
     if (n.type === "message" && n.chatId) {
       window.location.href = `/mesajlar?chat=${n.chatId}`;
       return;
     }
 
-    // 🔗 Teklif bildirimi
     if (n.type === "teklif" && n.ilanId) {
       window.location.href = `/ilan/${n.ilanId}`;
       return;
     }
 
-    // 🔗 İlan bildirimi
     if (n.type === "ilan") {
       window.location.href = "/hesabim/bildirimler";
       return;
     }
 
-    // fallback
-    return;
+    if (n.type === "destek") {
+      window.location.href = "/hesabim/geri-bildirim";
+      return;
+    }
   };
 
-  /* 🔵 Okundu işaretle */
-  const markAsRead = () => {
-    notifications.forEach((n) => {
+  const markAsRead = async () => {
+    for (const n of notifications) {
       if (!n.read) {
-        updateDoc(doc(db, "notifications", n.id), { read: true });
+        await updateDoc(doc(db, "notifications", n.id), { read: true });
       }
-    });
+    }
   };
 
   return (
