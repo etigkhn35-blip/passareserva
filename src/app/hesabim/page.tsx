@@ -14,13 +14,12 @@ import {
   where,
   getDocs,
   doc,
-  getDoc,
   deleteDoc,
   onSnapshot,
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import Link from "next/link";
-import { HeartOff, Camera } from "lucide-react";
+import { HeartOff } from "lucide-react";
 
 export default function HesabimPage() {
   const [user, setUser] = useState<any>(null);
@@ -28,92 +27,97 @@ export default function HesabimPage() {
   const [favoriler, setFavoriler] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 🔥 Yanma durumları
+  const [hasNewMessage, setHasNewMessage] = useState(false);
+  const [hasNewNotif, setHasNewNotif] = useState(false);
+
   // Profil alanları
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
 
-  // 🔹 Yeni eklenen: Bildirim durumları
-  const [hasNewOffer, setHasNewOffer] = useState(false);
-  const [hasNewMessage, setHasNewMessage] = useState(false);
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+
       if (currentUser) {
         setDisplayName(currentUser.displayName || "");
         setEmail(currentUser.email || "");
         setPhoto(currentUser.photoURL || null);
+
         await fetchFavoriler(currentUser.uid);
-        listenNotifications(currentUser.uid); // 🔸 Bildirim dinleme
+
+        // 🔥 Bildirimleri dinle
+        const unsubNotif = listenNotifications(currentUser.uid);
+
+        return () => unsubNotif();
       }
     });
+
     return () => unsubscribe();
   }, []);
 
-  // 🔹 Favorileri getir
+  // ✅ Favorileri getir
   const fetchFavoriler = async (uid: string) => {
-  try {
-    const snap = await getDocs(
-      collection(db, "favoriler", uid, "items")
+    try {
+      const snap = await getDocs(collection(db, "favoriler", uid, "items"));
+
+      const favs = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          favId: d.id,
+          ilanId: data.ilanId || d.id,
+          baslik: data.baslik || "-",
+          coverUrl: data.coverUrl || "/defaults/default.jpg",
+          ucret: data.fiyat || 0,
+          aciklama: data.aciklama || "",
+        };
+      });
+
+      setFavoriler(favs);
+    } catch (err) {
+      console.error("Favoriler alınamadı:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Bildirimleri dinle (YANMA BURADAN)
+  const listenNotifications = (uid: string) => {
+    const q = query(
+      collection(db, "users", uid, "notifications"),
+      where("read", "==", false)
     );
 
-    const favs = snap.docs.map((d) => {
-      const data = d.data();
-      return {
-        favId: d.id,
-        ilanId: data.ilanId || d.id,
-        baslik: data.baslik || "-",
-        coverUrl: data.coverUrl || "/defaults/default.jpg",
-        ucret: data.fiyat || 0,
-      };
-    });
-
-    setFavoriler(favs);
-  } catch (err) {
-    console.error("Favoriler alınamadı:", err);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  // 🔹 Bildirimleri dinle (teklif ve mesajlar)
-  const listenNotifications = (uid: string) => {
-    const q = query(collection(db, "notifications"), where("toUserUid", "==", uid));
     return onSnapshot(q, (snap) => {
-      let offer = false;
       let msg = false;
-      snap.forEach((doc) => {
-        const d = doc.data();
-        if (!d.read) {
-          if (d.type === "offer") offer = true;
-          if (d.type === "message") msg = true;
-        }
+      let notif = false;
 
+      snap.forEach((d) => {
+        const data = d.data();
 
+        if (data.type === "message") msg = true;
+        else notif = true; // message değilse genel bildirim
       });
-      setHasNewOffer(offer);
+
       setHasNewMessage(msg);
+      setHasNewNotif(notif);
     });
   };
 
-  // 🔹 Favoriden kaldır
+  // ✅ Favoriden kaldır
   const removeFavorite = async (favId: string) => {
-  if (!user) return;
-  if (!confirm("Bu ilanı favorilerden kaldırmak istiyor musunuz?")) return;
+    if (!user) return;
+    if (!confirm("Bu ilanı favorilerden kaldırmak istiyor musunuz?")) return;
 
-  try {
-    await deleteDoc(
-      doc(db, "favoriler", user.uid, "items", favId)
-    );
+    try {
+      await deleteDoc(doc(db, "favoriler", user.uid, "items", favId));
 
-    setFavoriler((prev) =>
-      prev.filter((f) => f.favId !== favId)
-    );
-  } catch (err) {
-    console.error("Favori silme hatası:", err);
-  }
-};
+      setFavoriler((prev) => prev.filter((f) => f.favId !== favId));
+    } catch (err) {
+      console.error("Favori silme hatası:", err);
+    }
+  };
 
   // 🔹 Profil fotoğrafı yükleme
   const handlePhotoChange = async (e: any) => {
@@ -132,10 +136,11 @@ export default function HesabimPage() {
   // 🔹 Bilgileri kaydet
   const handleSaveProfile = async () => {
     if (!user) return;
+
     try {
-      if (displayName !== user.displayName)
-        await updateProfile(user, { displayName });
+      if (displayName !== user.displayName) await updateProfile(user, { displayName });
       if (email !== user.email) await updateEmail(user, email);
+
       alert("✅ Profil bilgileri güncellendi.");
     } catch (err: any) {
       console.error(err);
@@ -150,7 +155,7 @@ export default function HesabimPage() {
     alert("📧 Şifre sıfırlama e-postası gönderildi!");
   };
 
-  if (!user)
+  if (!user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center text-gray-600">
         <p>Devam etmek için giriş yapmalısınız.</p>
@@ -159,6 +164,7 @@ export default function HesabimPage() {
         </Link>
       </div>
     );
+  }
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -170,52 +176,102 @@ export default function HesabimPage() {
           <aside className="bg-white border rounded-xl p-4 shadow-sm">
             <nav className="space-y-2">
               <h2 className="font-semibold text-gray-700 mb-2">İLAN YÖNETİMİ</h2>
-              <Link href="/hesabim/yayinda" className="block text-sm text-gray-600 hover:text-primary">
+
+              <Link
+                href="/hesabim/yayinda"
+                className="block text-sm text-gray-600 hover:text-primary"
+              >
                 Yayında Olanlar
               </Link>
-              <Link href="/hesabim/yayinda-olmayan" className="block text-sm text-gray-600 hover:text-primary">
+
+              <Link
+                href="/hesabim/yayinda-olmayan"
+                className="block text-sm text-gray-600 hover:text-primary"
+              >
                 Yayında Olmayanlar
               </Link>
-              <Link href="/hesabim/suresi-dolan"className="block text-sm text-gray-600 hover:text-primary">Süresi Dolan İlanlar</Link>
+
+              <Link
+                href="/hesabim/suresi-dolan"
+                className="block text-sm text-gray-600 hover:text-primary"
+              >
+                Süresi Dolan İlanlar
+              </Link>
 
               <h2 className="font-semibold text-gray-700 mt-4 mb-2">
                 MESAJLAR VE BİLDİRİMLER
               </h2>
-              <Link href="/hesabim/mesajlar" className="relative block text-sm text-gray-600 hover:text-primary">
+
+              {/* 🔥 Mesajlar */}
+              <Link
+                href="/hesabim/mesajlar"
+                className="relative block text-sm text-gray-600 hover:text-primary"
+              >
                 Mesajlar
                 {hasNewMessage && (
                   <span className="absolute -top-1 -right-3 h-2.5 w-2.5 bg-blue-500 rounded-full animate-pulse"></span>
                 )}
               </Link>
-              <Link href="/hesabim/bildirimler" className="block text-sm text-gray-600 hover:text-primary">
+
+              {/* 🔥 Bildirimler */}
+              <Link
+                href="/hesabim/bildirimler"
+                className="relative block text-sm text-gray-600 hover:text-primary"
+              >
                 Bildirimler
+                {hasNewNotif && (
+                  <span className="absolute -top-1 -right-3 h-2.5 w-2.5 bg-blue-500 rounded-full animate-pulse"></span>
+                )}
               </Link>
-              
 
               <h2 className="font-semibold text-gray-700 mt-4 mb-2">HESABIM</h2>
-              <Link href="/hesabim/profil" className="block text-sm text-gray-600 hover:text-primary">
+              <Link
+                href="/hesabim/profil"
+                className="block text-sm text-gray-600 hover:text-primary"
+              >
                 Hesap Bilgileri
               </Link>
-              
-              
 
               <h2 className="font-semibold text-gray-700 mt-4 mb-2">DİĞER</h2>
-              <Link href="/hesabim/ayarlar" className="block text-sm text-gray-600 hover:text-primary">
+              <Link
+                href="/hesabim/ayarlar"
+                className="block text-sm text-gray-600 hover:text-primary"
+              >
                 Ayarlar
               </Link>
-              <Link href="/hesabim/yardim" className="block text-sm text-gray-600 hover:text-primary">
+
+              <Link
+                href="/hesabim/yardim"
+                className="block text-sm text-gray-600 hover:text-primary"
+              >
                 Yardım ve İşlem Rehberi
               </Link>
-              <Link href="/hesabim/geri-bildirim" className="block text-sm text-gray-600 hover:text-primary">
+
+              <Link
+                href="/hesabim/geri-bildirim"
+                className="block text-sm text-gray-600 hover:text-primary"
+              >
                 Sorun / Öneri Bildirimi
               </Link>
-              <Link href="/hesabim/hakkinda" className="block text-sm text-gray-600 hover:text-primary">
+
+              <Link
+                href="/hesabim/hakkinda"
+                className="block text-sm text-gray-600 hover:text-primary"
+              >
                 Hakkında
               </Link>
-              <Link href="/hesabim/kisisel-verilerin-korunmasi" className="block text-sm text-gray-600 hover:text-primary">
+
+              <Link
+                href="/hesabim/kisisel-verilerin-korunmasi"
+                className="block text-sm text-gray-600 hover:text-primary"
+              >
                 Kişisel Verilerin Korunması
               </Link>
-              <Link href="/hesabim/cerezler" className="block text-sm text-gray-600 hover:text-primary">
+
+              <Link
+                href="/hesabim/cerezler"
+                className="block text-sm text-gray-600 hover:text-primary"
+              >
                 Çerezler
               </Link>
             </nav>
@@ -223,65 +279,66 @@ export default function HesabimPage() {
 
           {/* Sağ İçerik */}
           <section className="md:col-span-3 bg-white border rounded-xl shadow-sm p-5">
-  {activeTab === "favoriler" && (
-    <>
-      {/* 🔹 Başlıkta favori sayısı gösterimi */}
-      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-        ❤️ Favorilerim{" "}
-        <span className="text-sm text-gray-500">
-          ({favoriler.length})
-        </span>
-      </h2>
+            {activeTab === "favoriler" && (
+              <>
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  ❤️ Favorilerim{" "}
+                  <span className="text-sm text-gray-500">({favoriler.length})</span>
+                </h2>
 
-      {loading ? (
-        <p className="text-gray-500 animate-pulse">Yükleniyor...</p>
-      ) : favoriler.length === 0 ? (
-        <p className="text-gray-500 text-sm">
-          Henüz favoriye eklediğiniz bir ilan yok.
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {favoriler.map((fav) => (
-            <div
-              key={fav.favId}
-              className="border rounded-lg overflow-hidden bg-gray-50 shadow-sm hover:shadow-md transition"
-            >
-              <Link href={`/ilan/${fav.ilanId}`}>
-                <img
-                  src={fav.coverUrl || "/defaults/default.jpg"}
-                  alt={fav.baslik}
-                  className="w-full h-40 object-cover"
-                />
-              </Link>
-              <div className="p-3">
-                <h3 className="font-semibold text-gray-800 line-clamp-1">
-                  {fav.baslik || "İlan başlığı yok"}
-                </h3>
-                <p className="text-sm text-gray-500 mt-1 line-clamp-2">
-                  {fav.aciklama || "Açıklama bulunmuyor."}
-                </p>
-                <div className="flex items-center justify-between mt-3">
-                  <span className="text-primary font-semibold text-sm">
-                    {fav.ucret
-                      ? `${fav.ucret.toLocaleString("tr-TR")} ₺`
-                      : "Fiyat belirtilmedi"}
-                  </span>
-                  <button
-                    onClick={() => removeFavorite(fav.favId)}
-                    className="text-red-500 hover:text-red-700 transition"
-                    title="Favoriden kaldır"
-                  >
-                    <HeartOff className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  )}
-</section>
+                {loading ? (
+                  <p className="text-gray-500 animate-pulse">Yükleniyor...</p>
+                ) : favoriler.length === 0 ? (
+                  <p className="text-gray-500 text-sm">
+                    Henüz favoriye eklediğiniz bir ilan yok.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {favoriler.map((fav) => (
+                      <div
+                        key={fav.favId}
+                        className="border rounded-lg overflow-hidden bg-gray-50 shadow-sm hover:shadow-md transition"
+                      >
+                        <Link href={`/ilan/${fav.ilanId}`}>
+                          <img
+                            src={fav.coverUrl || "/defaults/default.jpg"}
+                            alt={fav.baslik}
+                            className="w-full h-40 object-cover"
+                          />
+                        </Link>
+
+                        <div className="p-3">
+                          <h3 className="font-semibold text-gray-800 line-clamp-1">
+                            {fav.baslik || "İlan başlığı yok"}
+                          </h3>
+
+                          <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                            {fav.aciklama || "Açıklama bulunmuyor."}
+                          </p>
+
+                          <div className="flex items-center justify-between mt-3">
+                            <span className="text-primary font-semibold text-sm">
+                              {fav.ucret
+                                ? `${fav.ucret.toLocaleString("tr-TR")} ₺`
+                                : "Fiyat belirtilmedi"}
+                            </span>
+
+                            <button
+                              onClick={() => removeFavorite(fav.favId)}
+                              className="text-red-500 hover:text-red-700 transition"
+                              title="Favoriden kaldır"
+                            >
+                              <HeartOff className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </section>
         </div>
       </div>
     </main>

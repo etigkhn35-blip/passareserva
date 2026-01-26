@@ -54,6 +54,7 @@ export default function Header() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const firstLoadRef = useRef(true);
   const prevUnreadRef = useRef(0);
+  const unlockedRef = useRef(false);
 
   // 🔍 Arama
   const handleSearch = (e: React.FormEvent) => {
@@ -71,101 +72,121 @@ export default function Header() {
     return () => unsubAuth();
   }, []);
 
-  // 💬 Mesaj bildirim sayısı
+  
   useEffect(() => {
-    if (!user) return;
+  if (!audioRef.current) {
+    audioRef.current = new Audio("/sounds/notification.mp3");
+    audioRef.current.preload = "auto";
+  }
 
-    const q = query(
-      collection(db, "users", user.uid, "notifications"),
-      where("type", "==", "message"),
-      orderBy("createdAt", "desc"),
-      limit(20)
-    );
+  const unlock = async () => {
+    if (unlockedRef.current) return;
 
-    const unsub = onSnapshot(q, (snap) => {
-      const list: NotificationDoc[] = snap.docs.map((d) => ({
-        ...(d.data() as NotificationDoc),
-        id: d.id,
-      }));
+    try {
+      await audioRef.current?.play();
+      audioRef.current?.pause();
+      audioRef.current!.currentTime = 0;
 
-      setUnreadCount(list.filter((n) => !n.read).length);
-    });
+      unlockedRef.current = true;
+      console.log("🔓 Ses unlock oldu");
+    } catch (e) {
+      console.log("🔒 Ses hala kilitli (kullanıcı tıklaması lazım)");
+    }
+  };
 
-    return () => unsub();
-  }, [user]);
+  window.addEventListener("click", unlock, { once: true });
+  return () => window.removeEventListener("click", unlock);
+}, []);
 
-  // 🔔 Genel bildirim listesi + ses
-  useEffect(() => {
-    if (!user) return;
 
-    // 🔊 Ses dosyasını hazırla
-    if (!audioRef.current) {
-      audioRef.current = new Audio("/sounds/notification.mp3");
+// 🔔 Bildirim dinle + SES ÇAL
+useEffect(() => {
+  if (!user) return;
+
+  if (!audioRef.current) {
+    audioRef.current = new Audio("/sounds/notification.mp3");
+    audioRef.current.preload = "auto";
+  }
+
+  const q = query(
+    collection(db, "notifications"),
+    where("toUserUid", "==", user.uid),
+    orderBy("createdAt", "desc"),
+    limit(10)
+  );
+
+  const unsub = onSnapshot(q, (snap) => {
+    const list: NotificationDoc[] = snap.docs.map((d) => ({
+      ...(d.data() as NotificationDoc),
+      id: d.id,
+    }));
+
+    setNotifications(list);
+
+    const unread = list.filter((n) => !n.read).length;
+    setNotifCount(unread);
+
+    // ilk açılışta ses çalma
+    if (firstLoadRef.current) {
+      firstLoadRef.current = false;
+      prevUnreadRef.current = unread;
+      return;
     }
 
-    const q = query(
-      collection(db, "users", user.uid, "notifications"),
-      orderBy("createdAt", "desc"),
-      limit(10)
-    );
+    // yeni bildirim geldiyse ses çal
+    if (unread > prevUnreadRef.current) {
+      const audio = audioRef.current;
 
-    const unsub = onSnapshot(q, (snap) => {
-      const list: NotificationDoc[] = snap.docs.map((d) => ({
-        ...(d.data() as NotificationDoc),
-        id: d.id,
-      }));
-
-      setNotifications(list);
-
-      const unread = list.filter((n) => !n.read).length;
-      setNotifCount(unread);
-
-      // ✅ İlk yüklemede ses çalma
-      if (firstLoadRef.current) {
-        firstLoadRef.current = false;
-        prevUnreadRef.current = unread;
-        return;
+      if (audio && unlockedRef.current) {
+        audio.currentTime = 0;
+        audio.play().catch((err) => console.log("🔇 Ses çalamadı:", err));
+      } else {
+        console.log("🔒 Ses unlock edilmediği için çalmadı");
       }
+    }
 
-      // ✅ Yeni bildirim geldiyse çal
-     if (unread > prevUnreadRef.current) {
-  const audio = audioRef.current;
-  if (audio) {
-    audio.currentTime = 0;
-    audio.play().catch(() => {});
-  }
-}
+    prevUnreadRef.current = unread;
+  });
 
-      prevUnreadRef.current = unread;
-    });
+  return () => unsub();
+}, [user]);
 
-    return () => unsub();
-  }, [user]);
 
-  const handleNotificationClick = async (n: NotificationDoc) => {
+const handleNotificationClick = async (n: NotificationDoc) => {
   if (!user) return;
 
   try {
     if (!n.id) return;
 
-    // 1) Okundu işaretle
-    await updateDoc(doc(db, "users", user.uid, "notifications", n.id), {
-      read: true,
-    });
+    // ✅ 1) Okundu işaretle (önce users/{uid}/notifications dene)
+    try {
+      await updateDoc(doc(db, "users", user.uid, "notifications", n.id), {
+        read: true,
+      });
+    } catch (err) {
+      // 🔁 Eğer orada yoksa ana koleksiyonda dene
+      try {
+        await updateDoc(doc(db, "notifications", n.id), {
+          read: true,
+        });
+      } catch (err2) {
+        console.warn("Bildirim okundu işaretlenemedi:", err2);
+      }
+    }
 
-    // 2) Destek yanıtı → Geri Bildirim sayfası
+    // ✅ 2) Destek yanıtı → Geri Bildirim sayfası
     if (n.type === "support_reply" || n.type === "destek") {
       window.location.href = "/hesabim/geri-bildirim";
       return;
     }
 
-    // 3) Mesaj bildirimi → Mesajlarım
+    // ✅ 3) Mesaj bildirimi → Mesajlarım
     if (n.type === "message") {
       window.location.href = "/hesabim/mesajlar";
       return;
     }
 
-    // 4) İlan bildirimleri → ilan sayfası
+    // ✅ 4) İlan bildirimleri → ilan sayfası
     if (n.type === "ilan" || n.type?.startsWith("ilan_")) {
       window.location.href = n.ilanId
         ? `/ilan/${encodeURIComponent(n.ilanId)}`
@@ -173,7 +194,7 @@ export default function Header() {
       return;
     }
 
-    // 5) Bildirimde path varsa oraya git
+    // ✅ 5) Bildirimde path varsa oraya git
     if (n.path) {
       window.location.href = n.path;
       return;
@@ -188,8 +209,6 @@ export default function Header() {
     setMobileMenu(false);
   }
 };
-
-  
 
   const handleLogout = async () => {
     await signOut(auth);

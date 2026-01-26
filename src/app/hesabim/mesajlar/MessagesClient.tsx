@@ -27,6 +27,22 @@ export default function MessagesClient() {
   const [newMessage, setNewMessage] = useState("");
   const [loadingAuth, setLoadingAuth] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ADMIN_UID = "Presmt66LxdgLJQZareFD0Os7kL2";
+
+  const formatDateTime = (ts: any) => {
+  if (!ts) return "";
+
+  const date =
+    typeof ts?.toDate === "function" ? ts.toDate() : new Date(ts);
+
+  return date.toLocaleString("tr-TR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
   /* 🔊 Bildirim sesi */
   useEffect(() => {
@@ -41,67 +57,73 @@ export default function MessagesClient() {
     });
   }, []);
 
-  /* 💬 Sohbet listesi */
-  useEffect(() => {
-    if (!meUid) return;
+/* 💬 Sohbet listesi */
+useEffect(() => {
+  if (!meUid) return;
 
-    const q = query(
-      collection(db, "messages"),
-      where("participants", "array-contains", meUid)
-    );
+  const ADMIN_UID = "Presmt66LxdgLJQZareFD0Os7kL2";
 
-    const unsub = onSnapshot(q, async (snap) => {
-      const list: any[] = [];
+  const q = query(
+    collection(db, "messages"),
+    where("participants", "array-contains", meUid)
+  );
 
-      for (const d of snap.docs) {
-        const data = d.data();
-        const otherUid = data.participants.find((p: string) => p !== meUid);
+  const unsub = onSnapshot(q, async (snap) => {
+    const list: any[] = [];
 
-        let displayName = "Kullanıcı";
-        let isAdmin = false;
+    for (const d of snap.docs) {
+      const data = d.data();
+
+      let displayName = "Kullanıcı";
+      let isAdmin = false;
+
+      // ✅ Admin sohbeti
+      if (data.participants?.includes(ADMIN_UID)) {
+        displayName = "Yönetici";
+        isAdmin = true;
+      } else {
+        // 👤 Karşı taraf
+        const otherUid = data.participants.find(
+          (p: string) => p !== meUid
+        );
 
         if (otherUid) {
           const uDoc = await getDoc(doc(db, "users", otherUid));
           if (uDoc.exists()) {
             const u = uDoc.data();
-            const email = u?.email || "";
-
-            if (email === "info@tatilinidevret.com") {
-              displayName = "Yönetici";
-              isAdmin = true;
-            } else if (u?.ad || u?.soyad) {
-              displayName = `${u.ad || ""} ${u.soyad || ""}`.trim();
-            } else if (email) {
-              displayName = email;
-            }
+            displayName =
+              `${u?.ad || ""} ${u?.soyad || ""}`.trim() ||
+              u?.email ||
+              "Kullanıcı";
           }
         }
-
-        const lastRead = data.lastRead?.[meUid]?.toMillis?.() || 0;
-        const updatedAt = data.updatedAt?.toMillis?.() || 0;
-        const unread = updatedAt > lastRead && data.lastSenderId !== meUid;
-
-        list.push({
-          id: d.id,
-          displayName,
-          isAdmin,
-          unread,
-          ...data,
-          updatedAt: data.updatedAt || data.createdAt,
-        });
       }
 
-      list.sort(
-        (a, b) =>
-          (b.updatedAt?.toMillis?.() || 0) -
-          (a.updatedAt?.toMillis?.() || 0)
-      );
+      list.push({
+        id: d.id,
+        displayName,
+        isAdmin,
+        unread:
+          data.updatedAt?.toMillis?.() >
+            (data.lastRead?.[meUid]?.toMillis?.() || 0) &&
+          data.lastSenderId !== meUid,
+        ...data,
+        updatedAt: data.updatedAt || data.createdAt,
+      });
+    }
 
-      setChats(list);
-    });
+    list.sort(
+      (a, b) =>
+        (b.updatedAt?.toMillis?.() || 0) -
+        (a.updatedAt?.toMillis?.() || 0)
+    );
 
-    return () => unsub();
-  }, [meUid]);
+    setChats(list);
+  });
+
+  return () => unsub();
+}, [meUid]);
+
 
   /* 📬 Chat aç */
   const openChat = async (chat: any) => {
@@ -164,15 +186,18 @@ export default function MessagesClient() {
                   selectedChat?.id === c.id ? "bg-blue-50 border-blue-400" : ""
                 }`}
               >
+                
                 <div className="flex items-center justify-between">
                   <p className="font-semibold">{c.ilanBaslik || "Sohbet"}</p>
                   {c.unread && <span className="w-2 h-2 bg-blue-600 rounded-full" />}
                 </div>
+                
 
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-sm text-gray-600">{c.displayName}</span>
-                  {c.isAdmin && (
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-600 text-white font-semibold">
+
+{c.isAdmin && (
+  <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-600 text-white font-semibold">
                       Yönetici
                     </span>
                   )}
@@ -192,23 +217,32 @@ export default function MessagesClient() {
 
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {messages.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`flex ${
-                      m.senderId === meUid ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    <div
-                      className={`px-4 py-2 rounded-2xl text-sm ${
-                        m.senderId === meUid
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-200"
-                      }`}
-                    >
-                      {m.text}
-                    </div>
-                  </div>
-                ))}
+  <div
+    key={m.id}
+    className={`flex ${
+      m.senderId === meUid ? "justify-end" : "justify-start"
+    }`}
+  >
+    <div
+      className={`max-w-[70%] px-4 py-2 rounded-2xl text-sm ${
+        m.senderId === meUid
+          ? "bg-blue-600 text-white"
+          : "bg-gray-200 text-gray-900"
+      }`}
+    >
+      <div>{m.text}</div>
+
+      {/* ✅ Tarih - Saat */}
+      <div
+        className={`text-[11px] mt-1 text-right ${
+          m.senderId === meUid ? "text-white/70" : "text-gray-500"
+        }`}
+      >
+        {formatDateTime(m.createdAt)}
+      </div>
+    </div>
+  </div>
+))}
               </div>
 
               <div className="p-3 border-t flex gap-3">
