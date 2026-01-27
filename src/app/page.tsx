@@ -204,25 +204,21 @@ const CATEGORIES = [
 
 /* -------------------------- ROZET BİLEŞENİ ------------------------- */
 function DiscountBadge({ indirim }: { indirim: number }) {
-  // Altın: %40+
   if (indirim >= 40) {
     return (
-      <div className="absolute top-2 left-2 z-10">
-        <div className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-bold shadow-md border border-yellow-300 bg-gradient-to-r from-yellow-200 to-yellow-500 text-yellow-900">
-          <span className="text-[12px]">🏅</span>
-          
+      <div className="absolute bottom-2 right-2 z-10">
+        <div className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9.5px] font-semibold shadow-md border border-yellow-300 bg-gradient-to-r from-yellow-200 to-yellow-500 text-yellow-900">
+          🏅
         </div>
       </div>
     );
   }
 
-  // Gümüş: %30–39
   if (indirim >= 30) {
     return (
-      <div className="absolute top-2 left-2 z-10">
-        <div className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-bold shadow-md border border-gray-200 bg-gradient-to-r from-gray-100 to-gray-300 text-gray-800">
-          <span className="text-[12px]">🥈</span>
-          
+      <div className="absolute bottom-2 right-2 z-10">
+        <div className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9.5px] font-semibold shadow-md border border-gray-200 bg-gradient-to-r from-gray-100 to-gray-300 text-gray-800">
+          🥈
         </div>
       </div>
     );
@@ -230,7 +226,6 @@ function DiscountBadge({ indirim }: { indirim: number }) {
 
   return null;
 }
-
 
 /* -------------------------- SÜRE ROZETİ ------------------------- */
 function TimeBadge({ bitisTarihi }: { bitisTarihi?: any }) {
@@ -254,7 +249,7 @@ if (diffDays > 15) return null;
 // 8-15 gün = yeşil
 if (diffDays >= 8) {
   return (
-    <div className="absolute top-2 left-2 z-10">
+   <div className="absolute bottom-2 right-2 z-10">
       <div className="bg-green-600 text-white text-[10.5px] font-semibold px-2 py-1 rounded-md shadow-md">
         {diffDays} gün kaldı
       </div>
@@ -265,7 +260,7 @@ if (diffDays >= 8) {
   // 3-6 gün = turuncu
   if (diffDays >= 3) {
     return (
-      <div className="absolute top-2 left-2 z-10">
+     <div className="absolute bottom-2 right-2 z-10">
         <div className="bg-orange-500 text-white text-[10.5px] font-semibold px-2 py-1 rounded-md shadow-md">
           {diffDays} gün kaldı
         </div>
@@ -292,52 +287,82 @@ function VitrinCard({ item }: { item: Card }) {
     DEFAULT_IMAGES["Genel"];
 
   const indirim = Number((item as any).indirim || 0);
+  const isEfsane = indirim >= 40;
+  const isHarika = indirim >= 30 && indirim < 40;
 
   return (
     <a
       href={`/ilan/${item.id}`}
-      className="group border border-gray-200 rounded-xl overflow-hidden bg-white hover:shadow-md transition cursor-pointer block"
+      className={`
+        group block rounded-xl overflow-hidden bg-white transition
+        active:scale-[0.97] sm:active:scale-100
+      ${isEfsane ? "ring-1 ring-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.35)]" : ""}
+        ${isHarika ? "border-2 border-green-400 shadow-md" : "border border-gray-200"}
+      `}
     >
-      {/* Kartlar daha küçük olsun diye oranı biraz genişlettik */}
-      <div className="aspect-[16/11] w-full overflow-hidden bg-gray-100 relative">
-       <img
-            src={imageSrc}
-            alt={item.title}
-           className="w-full h-full object-cover"
-           style={{ imageRendering: "auto" }}
-           />
+      {/* GÖRSEL */}
+      <div className="relative aspect-[16/11] w-full overflow-hidden bg-gray-100">
+        <img
+          src={imageSrc}
+          alt={item.title}
+          className="w-full h-full object-cover"
+        />
 
-        {/* 🔹 Süre rozeti (SADECE gerçek ilanlarda) */}
-        {!item.isFake && <TimeBadge bitisTarihi={(item as any).bitisTarihi} />}
-
-        {/* 🔹 Rozetler (SADECE gerçek ilanlarda) */}
-        {!item.isFake && indirim > 0 && <DiscountBadge indirim={indirim} />}
-
-        {/* 🔥 İndirim etiketi */}
-        {(item as any).indirim ? (
-          <div className="absolute top-2 right-2 bg-green-600 text-white text-[10.5px] font-bold px-2 py-1 rounded-md shadow-md">
-            %{(item as any).indirim} İndirim
+        {/* ⏳ SÜRE – SOL ÜST */}
+        {!item.isFake && (item as any).bitisTarihi && (
+          <div className="absolute top-1.5 left-1.5 z-20">
+            <div className="bg-green-600 text-white text-[9px] px-2 py-0.5 rounded-md shadow">
+              {(() => {
+                const end = new Date((item as any).bitisTarihi);
+                const diffDays = Math.ceil(
+                  (end.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                );
+                if (diffDays <= 0 || diffDays > 15) return null;
+                return diffDays <= 2 ? `Son ${diffDays}g` : `${diffDays}g kaldı`;
+              })()}
+            </div>
           </div>
-        ) : null}
+        )}
 
-        {/* 🔹 Devredildi ibaresi SADECE fake ilanlarda */}
+        {/* 💸 İNDİRİM – SAĞ ÜST */}
+        {indirim > 0 && !item.isFake && (
+          <div className="absolute top-1.5 right-1.5 z-20">
+            <div className="bg-green-600 text-white text-[9px] px-2 py-0.5 rounded-md shadow">
+              %{indirim}
+            </div>
+          </div>
+        )}
+
+        {/* 🏅 MADALYA – SAĞ ALT */}
+        {indirim >= 30 && !item.isFake && (
+          <div className="absolute bottom-1.5 right-1.5 z-20">
+           <div className="w-6 h-6 rounded-full flex items-center justify-center bg-white shadow-sm border text-[11px] opacity-90">
+              {isEfsane ? "🏅" : "🥈"}
+            </div>
+          </div>
+        )}
+
+        {/* ❌ DEVREDİLDİ */}
         {item.isFake && (
-          <div className="absolute top-2 left-2 bg-red-600 text-white text-[10.5px] font-semibold px-2 py-1 rounded-md shadow-md">
-            Devredildi
+          <div className="absolute top-1.5 left-1.5 z-20">
+            <div className="bg-red-600 text-white text-[9px] px-2 py-0.5 rounded-md shadow">
+              Devredildi
+            </div>
           </div>
         )}
       </div>
 
-      {/* Daha kompakt */}
+      {/* METİN */}
       <div className="p-2">
         <div className="text-[11px] text-gray-500 line-clamp-1">
           {item.location}
         </div>
+
         <div className="font-semibold text-gray-900 mt-0.5 line-clamp-1 text-[12.5px]">
           {item.title}
         </div>
 
-        <div className="mt-1 flex items-center justify-between">
+        <div className="mt-1">
           <span className="text-primary font-bold text-[12.5px]">
             {item.price?.toLocaleString("tr-TR")} ₺
           </span>
@@ -640,29 +665,55 @@ function BlogSection() {
             {pages.map((group, idx) => (
               <div key={idx} className="min-w-full p-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-               {group.map((p) => (
+              {group.map((p) => (
   <Link
     key={p.title}
     href={p.href}
     className="border border-gray-200 rounded-xl overflow-hidden bg-white hover:shadow-md transition block"
   >
-    <div className="relative h-36 w-full bg-gray-100 overflow-hidden">
-      <Image
-        src={p.img}
-        alt={p.title}
-        fill
-        quality={100}
-        priority
-        sizes="(max-width: 768px) 100vw, 33vw"
-        className="object-cover"
-      />
-    </div>
+    {/* GÖRSEL */}
+  <div
+  className="
+    relative
+    h-36          /* 📱 mobil – biraz küçülttük */
+    sm:h-40
+    md:h-40      /* 💻 desktop sabit */
+    w-full
+    overflow-hidden
+    bg-white     /* 🔴 SİYAHLIĞI KESEN ŞEY */
+  "
+>
+  <Image
+  src={p.img}
+  alt={p.title}
+  fill
+  sizes="(max-width: 768px) 100vw, 33vw"
+  className="
+    object-contain
+    md:object-cover
+    bg-white
 
+    /* 📱 mobil: çok hafif yakınlaştırma */
+    scale-[1.03]
+    -translate-y-0.5
+
+    /* 💻 desktop reset */
+    md:scale-100
+    md:translate-y-0,5
+
+  "
+/>
+
+</div>
+
+    {/* YAZI */}
     <div className="p-3">
       <div className="font-semibold text-gray-900 line-clamp-2 text-sm">
         {p.title}
       </div>
-      <div className="text-xs text-gray-600 mt-1 line-clamp-2">{p.desc}</div>
+      <div className="text-xs text-gray-600 mt-1 line-clamp-2">
+        {p.desc}
+      </div>
     </div>
   </Link>
 ))}

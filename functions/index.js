@@ -4,16 +4,19 @@ const nodemailer = require("nodemailer");
 
 admin.initializeApp();
 
-/* ---------------- SMTP CONFIG ---------------- */
+const smtpConfig = functions.config().smtp;
+
 const transporter = nodemailer.createTransport({
-  host: "srvc232.trwww.com",
-  port: 465,
-  secure: true,
+  host: smtpConfig.host,
+  port: Number(smtpConfig.port),
+  secure: Number(smtpConfig.port) === 465,
   auth: {
-    user: "info@tatilinidevret.com",
-    pass: "Sg254646sg**",
+    user: smtpConfig.user,
+    pass: smtpConfig.pass,
   },
 });
+
+from: `"Tatilini Devret" <${smtpConfig.from}>`,
 
 function buildMailTemplate({ title, subtitle, body, buttonText, buttonLink }) {
   return `
@@ -129,17 +132,23 @@ exports.sendNewUserMail = functions.auth.user().onCreate(async (user) => {
   
 ============================================================ */
 exports.notifyAdminNewListing = functions.firestore
-  .document("listings/{id}")
+  .document("ilanlar/{id}")
   .onCreate(async (snap) => {
     const ilan = snap.data();
+
     await sendMail(
       "info@tatilinidevret.com",
       "Yeni İlan Oluşturuldu",
-      `
-        <h2>Yeni ilan geldi</h2>
-        <p><b>Başlık:</b> ${ilan.title}</p>
-        <p><b>Sahibi UID:</b> ${ilan.sellerUid}</p>
-      `
+      buildMailTemplate({
+        title: "Yeni ilan oluşturuldu",
+        subtitle: "Admin Bildirimi",
+        body: `
+          <p><b>Başlık:</b> ${ilan.baslik}</p>
+          <p><b>Sahibi:</b> ${ilan.sahipEmail}</p>
+        `,
+        buttonText: "İlanı Gör",
+        buttonLink: `https://tatilinidevret.com/ilan/${snap.id}`,
+      })
     );
   });
 
@@ -148,19 +157,25 @@ exports.notifyAdminNewListing = functions.firestore
    
 ============================================================ */
 exports.notifyListingApproved = functions.firestore
-  .document("listings/{id}")
+  .document("ilanlar/{id}")
   .onUpdate(async (change) => {
     const before = change.before.data();
     const after = change.after.data();
 
-    if (!before.approved && after.approved) {
+    if (before.status !== "approved" && after.status === "approved") {
       await sendMail(
-        after.sellerEmail,
-        "İlanınız Onaylandı!",
-        `
-          <h2>Tebrikler 🎉</h2>
-          <p><b>Başlık:</b> ${after.title}</p>
-        `
+        after.sahipEmail,
+        "İlanınız Yayına Alındı 🎉",
+        buildMailTemplate({
+          title: "İlanınız Yayında 🎉",
+          subtitle: "Tebrikler",
+          body: `
+            <p><b>${after.baslik}</b> başlıklı ilanınız yayına alındı.</p>
+            <p>Artık ilanınız ziyaretçiler tarafından görüntülenebilir.</p>
+          `,
+          buttonText: "İlanı Gör",
+          buttonLink: `https://tatilinidevret.com/ilan/${change.after.id}`,
+        })
       );
     }
   });
@@ -224,6 +239,102 @@ exports.notifyOfferAccepted = functions.firestore
       );
     }
   });
+            /* ============================================================
+   ✅  DESTEK MESAJINA YANIT BİLDİRİMİ
+============================================================ */
+
+  exports.notifySupportReply = functions.firestore
+  .document("messages/{id}")
+  .onCreate(async (snap) => {
+    const msg = snap.data();
+
+    if (msg.from === "admin" && msg.toEmail) {
+      await sendMail(
+        msg.toEmail,
+        "Destek Mesajınıza Yanıt Var 💬",
+        buildMailTemplate({
+          title: "Destek Ekibimiz Yanıtladı",
+          body: `
+            <p>Destek mesajınıza cevap verdik:</p>
+            <p><i>${msg.text}</i></p>
+          `,
+          buttonText: "Mesajları Gör",
+          buttonLink: "https://tatilinidevret.com/mesajlar",
+        })
+      );
+    }
+  });
+
+/* ============================================================
+   ✅  FAVORİLERE EKLİ İLAN İNDİRİME GİRDİĞİNDE BİLDİRİM
+============================================================ */
+
+  exports.notifyFavoriteDiscount = functions.firestore
+  .document("ilanlar/{id}")
+  .onUpdate(async (change) => {
+    const before = change.before.data();
+    const after = change.after.data();
+
+    if (
+      before.ucret === after.ucret ||
+      after.ucret >= before.ucret
+    ) return;
+
+    const db = admin.firestore();
+    const ilanId = change.after.id;
+
+    const usersSnap = await db.collection("users").get();
+
+    for (const userDoc of usersSnap.docs) {
+      const favDoc = await db
+        .collection("favoriler")
+        .doc(userDoc.id)
+        .collection("items")
+        .doc(ilanId)
+        .get();
+
+      if (favDoc.exists && userDoc.data().email) {
+        await sendMail(
+          userDoc.data().email,
+          "Favorilediğiniz İlan İndirime Girdi 💸",
+          buildMailTemplate({
+            title: "İndirim Var 💸",
+            body: `
+              <p>Favorilediğiniz <b>${after.baslik}</b> ilanı indirime girdi.</p>
+            `,
+            buttonText: "İlanı Gör",
+            buttonLink: `https://tatilinidevret.com/ilan/${ilanId}`,
+          })
+        );
+      }
+    }
+  });
+
+/* ============================================================
+   ✅  ÖDEME BAŞARILI BİLDİRİMİ
+============================================================ */
+  
+exports.notifyPaymentSuccess = functions.firestore
+  .document("payments/{id}")
+  .onCreate(async (snap) => {
+    const p = snap.data();
+
+    await sendMail(
+      p.userEmail,
+      "Ödemeniz Alındı 🧾",
+      buildMailTemplate({
+        title: "Ödeme Başarılı",
+        body: `
+          <p><b>Tutar:</b> ${p.amount} ₺</p>
+          <p><b>İlan:</b> ${p.ilanBaslik}</p>
+        `,
+      })
+    );
+  });
+
+
+
+
 
 /* ============================================================
    ✅ 8) TEKLİF REDDEDİLDİ
