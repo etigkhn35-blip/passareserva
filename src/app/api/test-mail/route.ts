@@ -6,7 +6,7 @@ export async function GET() {
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT),
-      secure: process.env.SMTP_SECURE === "true",
+      secure: process.env.SMTP_PORT === "465",
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
@@ -14,15 +14,14 @@ export async function GET() {
     });
 
     await transporter.sendMail({
-      from: process.env.MAIL_FROM,
-      to: process.env.SMTP_USER,
-      subject: "Test Mail ✔",
-      html: "<b>Mail sistemi çalışıyor</b>",
+      from: `"Tatilini Devret" <${process.env.MAIL_FROM}>`,
+      to: "info@tatilinidevret.com",
+      subject: "Test Mail",
+      html: "<h2>Mail sistemi çalışıyor ✅</h2>",
     });
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {
-    console.error("MAIL ERROR:", err);
     return NextResponse.json(
       { ok: false, error: err.message },
       { status: 500 }

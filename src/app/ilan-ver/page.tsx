@@ -1108,6 +1108,10 @@ const endDate = Timestamp.fromDate(
     Bu alan satın aldığın gerçek fiyat içindir. İndirimi otomatik hesaplamak için kullanılır.
   </p>
 </div>
+<p>
+          💬 %30–%40 arası indirimli ilanlar “Muhteşem İlanlar”; %40 ve üzeri
+          indirimli ilanlar “Efsane İlanlar” bölümünde ücretsiz öne çıkarılır.
+        </p>
 
           {/* Fiyat */}
          <div>
@@ -1131,6 +1135,8 @@ const endDate = Timestamp.fromDate(
     Satış fiyatı, ödediğiniz tutarın üzerinde olamaz.
   </p>
 </div>
+
+
 
           {/* Ücretli Özellikler */}
           <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1174,7 +1180,7 @@ const endDate = Timestamp.fromDate(
       <p className="font-semibold text-lg text-blue-700">💡 İlan Yayın Paketleri</p>
 
       {/* İlk ilan kampanyası */}
-      <div className="border rounded-lg p-3 bg-gray-50">
+      <div className="border rounded-lg p-3 bg-gray-0">
         <p className="font-semibold">⭐ Yeni Üyeye Özel: İlk İlan Kampanyası</p>
         <ul className="list-disc ml-5 mt-2 space-y-1">
           <li>Fiyat: Ücretsiz</li>
@@ -1191,18 +1197,16 @@ const endDate = Timestamp.fromDate(
           {isEvent ? "🎟️ Etkinlik İlanı" : "📦 Standart İlan"}
         </p>
         <ul className="list-disc ml-5 mt-2 space-y-1">
+          
           <li>
-            İlk <b>{plan.freeDays} gün</b> ücretsiz
-          </li>
-          <li>
-            Sonrasında 1 aylık ilan fiyatı: <b>{plan.monthlyPrice} TL</b>
+             İlan fiyatı: <b>{plan.monthlyPrice} TL</b>
           </li>
           <li>Süre: <b>30 gün</b></li>
         </ul>
 
         <p className="mt-2 text-xs text-gray-600">
           {isFirstListing
-            ? "🎉 İlk ilanınız ücretsizdir. Ek özellik seçerseniz sadece onların ücretini ödersiniz."
+            ? ""
             : `ℹ️ Bu ikinci veya sonraki ilanınız. Standart ilan ücreti (${plan.monthlyPrice} TL) + seçtiğiniz ek özellikler uygulanır.`}
         </p>
       </div>
@@ -1228,10 +1232,7 @@ const endDate = Timestamp.fromDate(
           🧾 <b>KDV Oranı:</b> %20
         </p>
         <p>💳 Toplam tutar ilan sırasında otomatik hesaplanır.</p>
-        <p>
-          💬 %30–%40 arası indirimli ilanlar “Muhteşem İlanlar”; %40 ve üzeri
-          indirimli ilanlar “Efsane İlanlar” bölümünde ücretsiz öne çıkarılır.
-        </p>
+       
       </div>
     </div>
   )}
