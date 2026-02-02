@@ -25,7 +25,7 @@ type Card = {
 const DEFAULT_IMAGES: Record<string, string> = {
   Otel: "/defaults/konaklama-otel.jpg",
   "Villa / Yazlık": "/defaults/konaklama-villa.jpg",
-  "Airbnb & Booking Rezervasyonu": "/defaults/konaklama-airbnb.jpg",
+  "Global Konaklama İlanları": "/defaults/konaklama-airbnb.jpg",
   "Bungalow / Tiny House": "/defaults/konaklama-bungalow.jpg",
   "Dağ / Yayla Evi": "/defaults/konaklama-yayla.jpg",
   "Tatil Köyü": "/defaults/konaklama-tatilkoyu.jpg",
@@ -156,7 +156,7 @@ const CATEGORIES = [
     subs: [
       "Otel",
       "Villa / Yazlık",
-      "Airbnb & Booking Rezervasyonu",
+      "Global Konaklama İlanları",
       "Bungalow / Tiny House",
       "Dağ / Yayla Evi",
       "Tatil Köyü",
