@@ -1331,6 +1331,15 @@ const endDate = Timestamp.fromDate(
               </span>
             </label>
           </div>
+          <label className="flex items-start gap-2 text-sm text-gray-600">
+  <input type="checkbox" required />
+  <span>
+    <a href="/odeme-iptal-iade" className="text-primary underline">
+      Ödeme iptali ve iade koşullarını
+    </a>{" "}
+    okudum, kabul ediyorum.
+  </span>
+</label>
 
           {/* Aksiyon */}
           <div className="flex justify-end gap-3 pt-2">

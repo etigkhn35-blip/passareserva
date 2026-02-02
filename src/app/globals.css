@@ -7,3 +7,12 @@ html, body {
   color: #111;
   font-family: 'Montserrat', sans-serif;
 }
+
+@keyframes textPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}

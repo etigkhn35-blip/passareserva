@@ -227,7 +227,7 @@ const handleNotificationClick = async (n: NotificationDoc) => {
         type="text"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        placeholder="Tatil, otel, villa ara..."
+        placeholder="İlan ara..."
         className="w-full border border-gray-300 rounded-l-lg px-3 py-2 text-[13px] focus:ring-2 focus:ring-[color:#00AEEF] outline-none"
       />
       <button

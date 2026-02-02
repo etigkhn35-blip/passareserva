@@ -151,7 +151,7 @@ const EVENT_SUBCATEGORIES: Record<string, string[]> = {
 /* ----------------------------- KATEGORİLER ------------------------------ */
 const CATEGORIES = [
   {
-    title: "Konaklama",
+    title: "Konaklama İlanları",
     icon: "🏨",
     subs: [
       "Otel",
@@ -164,7 +164,7 @@ const CATEGORIES = [
     ],
   },
   {
-    title: "Deneyim Tatilleri",
+    title: "Deneyim Tatil İlanları",
     icon: "🌿",
     subs: [
       "Tekne / Yat Tatili",
@@ -176,7 +176,7 @@ const CATEGORIES = [
     ],
   },
   {
-    title: "Turlar",
+    title: "Tur Paketi İlanları",
     icon: "🚌",
     subs: [
       "Kültür Turları",
@@ -188,7 +188,7 @@ const CATEGORIES = [
     ],
   },
   {
-    title: "Etkinlik Paketleri",
+    title: "Etkinlik Paketleri İlanları",
     icon: "🎟️",
     subs: [
       "Festival & Konser",
@@ -382,12 +382,12 @@ function CategoryAccordion() {
   return (
     <aside className="w-full lg:w-64 shrink-0">
       <div className="sticky top-4">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Kategoriler</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">İlan Kategorileri</h2>
 
         <div className="space-y-2">
           {CATEGORIES.map((c, idx) => {
             const isOpen = openIndex === idx;
-            const isEventPack = c.title === "Etkinlik Paketleri";
+            const isEventPack = c.title === "Etkinlik Paketleri İlanları";
 
             return (
               <div
@@ -507,7 +507,7 @@ const SUBCAT_TO_MAIN: Record<string, string> = (() => {
 
   // normal kategoriler
   CATEGORIES.forEach((cat) => {
-    if (cat.title !== "Etkinlik Paketleri") {
+    if (cat.title !== "Etkinlik Paketleri İlanları") {
       cat.subs.forEach((sub) => {
         acc[sub] = cat.title;
       });
@@ -517,7 +517,7 @@ const SUBCAT_TO_MAIN: Record<string, string> = (() => {
   // etkinlik paketleri alt-alt kategoriler
   Object.entries(EVENT_SUBCATEGORIES).forEach(([main, subs]) => {
     subs.forEach((sub) => {
-      acc[sub] = "Etkinlik Paketleri";
+      acc[sub] = "Etkinlik Paketleri İlanları";
     });
   });
 
@@ -848,8 +848,9 @@ const vitrinView: Card[] = vitrin.slice(0, VITRIN_LIMIT);
   return (
     <>
       <Header />
+      
 
-     {/* BANNER */}
+    {/* BANNER */}
 <section className="bg-white border-b border-gray-200">
   <div className="max-w-[1200px] mx-auto px-0 md:px-4 py-0 md:py-4">
     <div className="relative">
@@ -860,8 +861,8 @@ const vitrinView: Card[] = vitrin.slice(0, VITRIN_LIMIT);
         className="w-full h-auto rounded-none md:rounded-lg"
       />
 
-      {/* ✅ SADECE BEYAZ BUTON */}
-    <a
+      {/* ✅ ANİMASYONLU CTA */}
+   <a
   href="/ilan-ver"
   className="
     absolute
@@ -870,7 +871,8 @@ const vitrinView: Card[] = vitrin.slice(0, VITRIN_LIMIT);
     font-semibold
     shadow-lg
     hover:bg-orange-50
-    transition
+    transition-all
+    duration-200
 
     /* DESKTOP */
     px-6 py-3 text-base rounded-full
@@ -889,13 +891,19 @@ const vitrinView: Card[] = vitrin.slice(0, VITRIN_LIMIT);
     transform: 'translate(-50%, 0)',
   }}
 >
-  Ücretsiz İlan Ver
+  <span
+    style={{
+      display: 'inline-block',
+      animation: 'textPulse 1.8s ease-in-out infinite',
+    }}
+  >
+    Ücretsiz İlan Ver
+  </span>
 </a>
 
     </div>
   </div>
 </section>
-
 
 
       {/* İçerik */}
@@ -909,7 +917,7 @@ const vitrinView: Card[] = vitrin.slice(0, VITRIN_LIMIT);
             <section>
               {/* ✅ Anasayfa vitrini en üstte */}
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold text-gray-900">Anasayfa Vitrini</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Anasayfa Vitrin İlanları</h2>
                 <a href="/tum-ilanlar" className="text-sm text-primary hover:underline">
                   Tüm ilanları görüntüle
                 </a>
@@ -940,7 +948,7 @@ const vitrinView: Card[] = vitrin.slice(0, VITRIN_LIMIT);
               {/* ✅ Efsane & Harika vitrin altına taşındı, başlık yanında extra yazı yok */}
               {efsane.length > 0 && (
                 <div className="mt-2 mb-8">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-3">🔥 Efsane Fırsatlar</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">🔥 Efsane İlanlar</h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {efsane.map((v) => (
                       <VitrinCard key={v.id} item={v} />
@@ -951,7 +959,7 @@ const vitrinView: Card[] = vitrin.slice(0, VITRIN_LIMIT);
 
               {muhteşem.length > 0 && (
                 <div className="mb-8">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-3">✨ Harika Fırsatlar</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">✨ Harika İlanlar</h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {muhteşem.map((v) => (
                       <VitrinCard key={v.id} item={v} />
@@ -998,6 +1006,11 @@ const vitrinView: Card[] = vitrin.slice(0, VITRIN_LIMIT);
               <li>
                 <a href="/sss" className="hover:text-primary transition">
                   SSS
+                </a>
+              </li>
+              <li>
+                <a href="/odeme-iptal-iade" className="hover:text-primary transition">
+                  Ödeme İptali & İade
                 </a>
               </li>
               <li>
