@@ -1,199 +1,225 @@
-export const CATEGORY_TREE = {
-  en: {
-    accommodation: {
-      title: "Accommodation Listings",
-      sections: [
-        { title: "Hotels", key: "accommodation_hotels", sub: [] },
-        { title: "Apartments & Holiday Rentals", key: "accommodation_apartments", sub: [] },
-        { title: "Villas & Holiday Homes", key: "accommodation_villas", sub: [] },
-        { title: "Resorts", key: "accommodation_resorts", sub: [] },
-        { title: "Cabins & Chalets", key: "accommodation_cabins", sub: [] },
-        { title: "Tiny Houses & Bungalows", key: "accommodation_tinyhouses", sub: [] },
-        { title: "Beach Houses", key: "accommodation_beachhouses", sub: [] },
-      ],
-    },
-
-    experience: {
-      title: "Experience Holidays",
-      sections: [
-        { title: "Yacht & Sailing Holidays", key: "experience_yacht", sub: [] },
-        { title: "Cruise Holidays", key: "experience_cruise", sub: [] },
-        { title: "Camping & Glamping Trips", key: "experience_camping", sub: [] },
-        { title: "Ski & Snow Holidays", key: "experience_ski", sub: [] },
-        { title: "Surf & Adventure Camps", key: "experience_surf", sub: [] },
-        { title: "Wellness & Spa Retreats", key: "experience_wellness", sub: [] },
-        { title: "Yoga & Meditation Retreats", key: "experience_yoga", sub: [] },
-        { title: "Wine & Gastronomy Trips", key: "experience_gastronomy", sub: [] },
-      ],
-    },
-
-    tour: {
-      title: "Tour Packages",
-      sections: [
-        { title: "Cultural Tours", key: "tour_cultural", sub: [] },
-        { title: "Nature & Hiking Tours", key: "tour_nature", sub: [] },
-        { title: "City Break Tours", key: "tour_city", sub: ["City tours"] },
-        { title: "Ski Tours", key: "tour_ski", sub: [] },
-        { title: "Honeymoon Packages", key: "tour_honeymoon", sub: [] },
-        { title: "Photography Tours", key: "tour_photography", sub: [] },
-        { title: "Day Trips & Excursions", key: "tour_daytrip", sub: [] },
-      ],
-    },
-
-    events: {
-      title: "Events",
-      sections: [
-        {
-          title: "Festivals & Concerts",
-          key: "event_festival",
-          sub: ["Music Festivals", "Concerts"],
-        },
-        {
-          title: "Workshops & Training",
-          key: "event_workshop",
-          sub: [],
-        },
-        {
-          title: "Sports Events",
-          key: "event_sports",
-          sub: [],
-        },
-        {
-          title: "Performing Arts & Shows",
-          key: "event_show",
-          sub: [],
-        },
-        {
-          title: "Experiences & Activities",
-          key: "event_activity",
-          sub: ["Wine tasting", "City tours"],
-        },
-        {
-          title: "Family & Kids Events",
-          key: "event_family",
-          sub: [],
-        },
-        {
-          title: "Business & Networking Events",
-          key: "event_business",
-          sub: [],
-        },
-        {
-          title: "Food & Wine Events",
-          key: "event_food",
-          sub: [],
-        },
-      ],
-    },
-
-    tickets: {
-      title: "Travel Tickets & Passes",
-      sections: [
-        { title: "Museum & Attraction Tickets", key: "ticket_museum", sub: [] },
-        { title: "Theme Park Tickets", key: "ticket_themepark", sub: [] },
-        { title: "Train & Transport Passes", key: "ticket_transport", sub: [] },
-        { title: "Guided Tour Tickets", key: "ticket_guided", sub: [] },
-        { title: "City Passes", key: "ticket_citypass", sub: [] },
-      ],
-    },
+export const CATEGORY_FIELDS: Record<
+  string,
+  {
+    en: string[];
+    pt: string[];
+  }
+> = {
+  /* ----------------------------- ACCOMMODATION ----------------------------- */
+  accommodation_hotels: {
+    en: [
+      "Hotel Name",
+      "Room Type",
+      "View Type",
+      "Floor / Block",
+      "Reservation Number",
+      "Notes",
+    ],
+    pt: [
+      "Nome do Hotel",
+      "Tipo de Quarto",
+      "Tipo de Vista",
+      "Andar / Bloco",
+      "Número da Reserva",
+      "Notas",
+    ],
   },
 
-  pt: {
-    accommodation: {
-      title: "Acomodações",
-      sections: [
-        { title: "Hotéis", key: "accommodation_hotels", sub: [] },
-        { title: "Apartamentos e Aluguéis de Férias", key: "accommodation_apartments", sub: [] },
-        { title: "Vilas e Casas de Férias", key: "accommodation_villas", sub: [] },
-        { title: "Resorts", key: "accommodation_resorts", sub: [] },
-        { title: "Cabines e Chalés", key: "accommodation_cabins", sub: [] },
-        { title: "Tiny Houses e Bungalows", key: "accommodation_tinyhouses", sub: [] },
-        { title: "Casas de Praia", key: "accommodation_beachhouses", sub: [] },
-      ],
-    },
+  accommodation_apartments: {
+    en: [
+      "Property Name",
+      "Room Count",
+      "Bathroom Count",
+      "Size (m²)",
+      "Location Notes",
+    ],
+    pt: [
+      "Nome da Propriedade",
+      "Número de Quartos",
+      "Número de Banheiros",
+      "Tamanho (m²)",
+      "Notas de Localização",
+    ],
+  },
 
-    experience: {
-      title: "Experiências de Viagem",
-      sections: [
-        { title: "Férias de Iate e Vela", key: "experience_yacht", sub: [] },
-        { title: "Cruzeiros", key: "experience_cruise", sub: [] },
-        { title: "Camping e Glamping", key: "experience_camping", sub: [] },
-        { title: "Férias de Esqui", key: "experience_ski", sub: [] },
-        { title: "Surf e Aventura", key: "experience_surf", sub: [] },
-        { title: "Bem-estar e Spa", key: "experience_wellness", sub: [] },
-        { title: "Yoga e Meditação", key: "experience_yoga", sub: [] },
-        { title: "Gastronomia e Vinhos", key: "experience_gastronomy", sub: [] },
-      ],
-    },
+  accommodation_villas: {
+    en: [
+      "Villa Name",
+      "Room Count",
+      "Bathroom Count",
+      "Size (m²)",
+      "Location Notes",
+    ],
+    pt: [
+      "Nome da Vila",
+      "Número de Quartos",
+      "Número de Banheiros",
+      "Tamanho (m²)",
+      "Notas de Localização",
+    ],
+  },
 
-    tour: {
-      title: "Pacotes de Tours",
-      sections: [
-        { title: "Tours Culturais", key: "tour_cultural", sub: [] },
-        { title: "Tours de Natureza", key: "tour_nature", sub: [] },
-        { title: "City Tours", key: "tour_city", sub: ["Passeios pela cidade"] },
-        { title: "Tours de Esqui", key: "tour_ski", sub: [] },
-        { title: "Lua de Mel", key: "tour_honeymoon", sub: [] },
-        { title: "Tours de Fotografia", key: "tour_photography", sub: [] },
-        { title: "Passeios de Um Dia", key: "tour_daytrip", sub: [] },
-      ],
-    },
+  accommodation_resorts: {
+    en: ["Resort Name", "Block / Area", "Room Type"],
+    pt: ["Nome do Resort", "Bloco / Área", "Tipo de Quarto"],
+  },
 
-    events: {
-      title: "Eventos",
-      sections: [
-        {
-          title: "Festivais e Concertos",
-          key: "event_festival",
-          sub: ["Festivais de Música", "Concertos"],
-        },
-        {
-          title: "Workshops e Treinamentos",
-          key: "event_workshop",
-          sub: [],
-        },
-        {
-          title: "Eventos Esportivos",
-          key: "event_sports",
-          sub: [],
-        },
-        {
-          title: "Artes Cênicas e Shows",
-          key: "event_show",
-          sub: [],
-        },
-        {
-          title: "Experiências e Atividades",
-          key: "event_activity",
-          sub: ["Degustação de vinho", "Passeios pela cidade"],
-        },
-        {
-          title: "Eventos para Família e Crianças",
-          key: "event_family",
-          sub: [],
-        },
-        {
-          title: "Eventos Corporativos",
-          key: "event_business",
-          sub: [],
-        },
-        {
-          title: "Eventos Gastronômicos",
-          key: "event_food",
-          sub: [],
-        },
-      ],
-    },
+  accommodation_cabins: {
+    en: ["Property Name", "Type", "Capacity", "Heating / Cooling"],
+    pt: ["Nome da Propriedade", "Tipo", "Capacidade", "Aquecimento / Arrefecimento"],
+  },
 
-    tickets: {
-      title: "Bilhetes e Passes",
-      sections: [
-        { title: "Museus e Atrações", key: "ticket_museum", sub: [] },
-        { title: "Parques Temáticos", key: "ticket_themepark", sub: [] },
-        { title: "Transporte", key: "ticket_transport", sub: [] },
-        { title: "Tours Guiados", key: "ticket_guided", sub: [] },
-        { title: "City Pass", key: "ticket_citypass", sub: [] },
-      ],
-    },
+  accommodation_tinyhouses: {
+    en: ["Property Name", "Type", "Capacity", "Heating / Cooling"],
+    pt: ["Nome da Propriedade", "Tipo", "Capacidade", "Aquecimento / Arrefecimento"],
+  },
+
+  accommodation_beachhouses: {
+    en: ["Property Name", "Distance to Beach", "View Type"],
+    pt: ["Nome da Propriedade", "Distância da Praia", "Tipo de Vista"],
+  },
+
+  /* ----------------------------- EXPERIENCE ----------------------------- */
+  experience_yacht: {
+    en: ["Boat / Yacht Name", "Departure Port", "Arrival Port", "Route"],
+    pt: ["Nome do Barco / Iate", "Porto de Saída", "Porto de Chegada", "Rota"],
+  },
+
+  experience_cruise: {
+    en: ["Ship Name", "Route", "Cabin Type", "Visa Status"],
+    pt: ["Nome do Navio", "Rota", "Tipo de Cabine", "Status de Visto"],
+  },
+
+  experience_camping: {
+    en: ["Camp Name", "Camp Type", "Equipment Notes"],
+    pt: ["Nome do Acampamento", "Tipo de Acampamento", "Notas de Equipamento"],
+  },
+
+  experience_ski: {
+    en: ["Ski Resort", "Equipment Status"],
+    pt: ["Estação de Esqui", "Status do Equipamento"],
+  },
+
+  experience_surf: {
+    en: ["Camp Name", "Activity Type", "Difficulty Level"],
+    pt: ["Nome do Camp", "Tipo de Atividade", "Nível de Dificuldade"],
+  },
+
+  experience_wellness: {
+    en: ["Program Name", "Package Details"],
+    pt: ["Nome do Programa", "Detalhes do Pacote"],
+  },
+
+  experience_yoga: {
+    en: ["Program Name", "Instructor / Group"],
+    pt: ["Nome do Programa", "Instrutor / Grupo"],
+  },
+
+  experience_gastronomy: {
+    en: ["Region / Route", "Chef / Restaurant Notes"],
+    pt: ["Região / Rota", "Notas do Chef / Restaurante"],
+  },
+
+  /* ----------------------------- TOURS ----------------------------- */
+  tour_cultural: {
+    en: ["Tour Name", "Departure Location", "Duration (Days)"],
+    pt: ["Nome do Tour", "Local de Saída", "Duração (Dias)"],
+  },
+
+  tour_nature: {
+    en: ["Route", "Difficulty Level", "Duration (Days)"],
+    pt: ["Rota", "Nível de Dificuldade", "Duração (Dias)"],
+  },
+
+  tour_city: {
+    en: ["City / Route", "Departure Location", "Duration (Days)"],
+    pt: ["Cidade / Rota", "Local de Saída", "Duração (Dias)"],
+  },
+
+  tour_ski: {
+    en: ["Ski Resort", "Equipment Status"],
+    pt: ["Estação de Esqui", "Status do Equipamento"],
+  },
+
+  tour_honeymoon: {
+    en: ["Package Name", "Special Notes"],
+    pt: ["Nome do Pacote", "Notas Especiais"],
+  },
+
+  tour_photography: {
+    en: ["Location", "Theme"],
+    pt: ["Localização", "Tema"],
+  },
+
+  tour_daytrip: {
+    en: ["Route", "Departure Time"],
+    pt: ["Rota", "Horário de Saída"],
+  },
+
+  /* ----------------------------- EVENTS ----------------------------- */
+  event_festival: {
+    en: ["Event Name", "City / Venue", "Ticket Type"],
+    pt: ["Nome do Evento", "Cidade / Local", "Tipo de Bilhete"],
+  },
+
+  event_workshop: {
+    en: ["Workshop Name", "Instructor", "Content"],
+    pt: ["Nome do Workshop", "Instrutor", "Conteúdo"],
+  },
+
+  event_sports: {
+    en: ["Event Name", "Seat / Category"],
+    pt: ["Nome do Evento", "Assento / Categoria"],
+  },
+
+  event_show: {
+    en: ["Show Name", "Venue"],
+    pt: ["Nome do Show", "Local"],
+  },
+
+  event_activity: {
+    en: ["Activity Name", "Details"],
+    pt: ["Nome da Atividade", "Detalhes"],
+  },
+
+  event_family: {
+    en: ["Event Name", "Age Range"],
+    pt: ["Nome do Evento", "Faixa Etária"],
+  },
+
+  event_business: {
+    en: ["Event Name", "Industry"],
+    pt: ["Nome do Evento", "Setor"],
+  },
+
+  event_food: {
+    en: ["Event Name", "Cuisine / Theme"],
+    pt: ["Nome do Evento", "Culinária / Tema"],
+  },
+
+  /* ----------------------------- TICKETS ----------------------------- */
+  ticket_museum: {
+    en: ["Attraction Name", "Ticket Type"],
+    pt: ["Nome da Atração", "Tipo de Bilhete"],
+  },
+
+  ticket_themepark: {
+    en: ["Park Name", "Ticket Type"],
+    pt: ["Nome do Parque", "Tipo de Bilhete"],
+  },
+
+  ticket_transport: {
+    en: ["Route", "Transport Type"],
+    pt: ["Rota", "Tipo de Transporte"],
+  },
+
+  ticket_guided: {
+    en: ["Tour Name", "Guide Info"],
+    pt: ["Nome do Tour", "Informação do Guia"],
+  },
+
+  ticket_citypass: {
+    en: ["City", "Included Attractions"],
+    pt: ["Cidade", "Atrações Incluídas"],
   },
 };
