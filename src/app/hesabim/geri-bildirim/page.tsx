@@ -15,7 +15,16 @@ import {
   doc,
   updateDoc,
   Timestamp,
+  deleteDoc,
 } from "firebase/firestore";
+import { 
+  ChevronLeft, MessageSquare, Send, Clock, 
+  AlertCircle, History, LifeBuoy, Loader2, Search, Trash2
+} from "lucide-react";
+
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { useLanguage } from "@/context/LanguageContext";
 
 type DestekTalebi = {
   id: string;
@@ -34,95 +43,116 @@ type DestekTalebi = {
 const formatDate = (t?: Timestamp | null) => {
   if (!t) return "-";
   try {
-    return t.toDate().toLocaleString("tr-TR");
+    const d = t.toDate();
+    return d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   } catch {
     return "-";
   }
 };
 
 export default function GeriBildirimPage() {
-  const [user, setUser] = useState<any>(null);
 
+  const { lang } = useLanguage();
+
+  const t = {
+    en: {
+      login: "YOU MUST LOGIN",
+      title: "SUPPORT & FEEDBACK",
+      subtitle: "Your requests and history",
+      history: "REQUEST HISTORY",
+      empty: "No requests yet",
+      send: "SEND",
+      placeholderTitle: "Subject Title",
+      placeholderMsg: "Write your message...",
+      success: "Your request has been sent successfully.",
+      select: "Select a request",
+      noChat: "No messages yet",
+      reply: "Write your reply...",
+      delete: "Delete",
+      confirm: "Are you sure you want to delete?",
+      deleteError: "Delete failed",
+      sendError: "Message could not be sent",
+      newReq: "New Issue or Suggestion",
+      newReqDesc: "Send message directly to our team",
+      pending: "Pending",
+      answered: "Answered",
+      newReply: "New Reply",
+      user: "User", // en
+    },
+    pt: {
+      login: "VOCÊ PRECISA FAZER LOGIN",
+      title: "SUPORTE & FEEDBACK",
+      subtitle: "Seus pedidos e histórico",
+      history: "HISTÓRICO",
+      empty: "Nenhum pedido ainda",
+      send: "ENVIAR",
+      placeholderTitle: "Título",
+      placeholderMsg: "Escreva sua mensagem...",
+      success: "Solicitação enviada com sucesso.",
+      select: "Selecione um pedido",
+      noChat: "Nenhuma mensagem ainda",
+      reply: "Digite sua resposta...",
+      delete: "Excluir",
+      confirm: "Tem certeza?",
+      deleteError: "Erro ao excluir",
+      sendError: "Mensagem não enviada",
+      newReq: "Nova solicitação",
+      newReqDesc: "Envie mensagem para nossa equipe",
+      pending: "Pendente",
+      answered: "Respondido",
+      newReply: "Nova resposta",
+      user: "Usuário", // pt
+    }
+  }[lang];
+
+  const [user, setUser] = useState<any>(null);
   const [baslik, setBaslik] = useState("");
   const [mesaj, setMesaj] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
-
   const [talepler, setTalepler] = useState<DestekTalebi[]>([]);
   const [selected, setSelected] = useState<DestekTalebi | null>(null);
+  const [loadingData, setLoadingData] = useState(true);
+  const [replyText, setReplyText] = useState("");
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
 
-  // 🔹 Kullanıcı oturumu kontrolü
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
+    return onAuthStateChanged(auth, setUser);
   }, []);
 
-  // 🔹 Kullanıcının destek taleplerini dinle
+  const handleOpenTalep = async (t: DestekTalebi) => {
+  setSelected(t);
+
+  if (t.durum === "yanıtlandı" && !t.okundu) {
+    await updateDoc(doc(db, "destek_talepleri", t.id), {
+      okundu: true,
+    });
+  }
+};
+
   useEffect(() => {
     if (!user?.uid) return;
-
     const q = query(
       collection(db, "destek_talepleri"),
       where("userUid", "==", user.uid),
       orderBy("olusturmaTarihi", "desc")
     );
-
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => {
-        const raw = d.data() as any;
-        return {
-          id: d.id,
-          baslik: raw?.baslik ?? "",
-          mesaj: raw?.mesaj ?? "",
-          email: raw?.email ?? "",
-          adSoyad: raw?.adSoyad ?? "",
-          userUid: raw?.userUid ?? "",
-          durum: raw?.durum ?? "beklemede",
-          okundu: raw?.okundu ?? false,
-          olusturmaTarihi: raw?.olusturmaTarihi ?? null,
-          yanit: raw?.yanit ?? "",
-          yanitTarihi: raw?.yanitTarihi ?? null,
-        } as DestekTalebi;
-      });
-
+    return onSnapshot(q, (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as DestekTalebi));
       setTalepler(data);
-
-      // seçili talep silinmişse reset
-      if (selected) {
-        const still = data.find((x) => x.id === selected.id);
-        if (!still) setSelected(null);
-        else setSelected(still);
-      }
+      setLoadingData(false);
     });
-
-    return () => unsub();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid]);
 
-  // 🔹 Form gönderme işlemi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!user) {
-      alert("Giriş yapmadan bildirim gönderemezsiniz.");
-      return;
-    }
-
-    if (!baslik.trim() || !mesaj.trim()) {
-      alert("Lütfen başlık ve mesaj alanlarını doldurun.");
-      return;
-    }
+    if (!user || !baslik.trim() || !mesaj.trim()) return;
 
     setLoading(true);
-    setSuccess(null);
-
     try {
-      // 1) Destek kaydı
       await addDoc(collection(db, "destek_talepleri"), {
         userUid: user.uid,
-        adSoyad: user.displayName || "Anonim Kullanıcı",
+        adSoyad: user.displayName || t.user,
         email: user.email,
         baslik: baslik.trim(),
         mesaj: mesaj.trim(),
@@ -131,229 +161,175 @@ export default function GeriBildirimPage() {
         olusturmaTarihi: serverTimestamp(),
       });
 
-      // 2) Admin bildirimi (admin panel zil)
-      await addDoc(collection(db, "notifications"), {
-        type: "destek",
-        title: baslik.trim(),
-        message: mesaj.trim(),
-        userUid: user.uid,
-        toUserUid: "admin",
-        read: false,
-        createdAt: serverTimestamp(),
-      });
-
-      setSuccess("✅ Bildiriminiz başarıyla gönderildi. En kısa sürede incelenecektir.");
+      setSuccess(t.success);
       setBaslik("");
       setMesaj("");
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      console.error("❌ Bildirim gönderim hatası:", err);
-      setSuccess("❌ Bildiriminiz gönderilemedi, lütfen tekrar deneyin.");
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔹 Yanıtı açınca okundu yap
-  const handleOpenTalep = async (t: DestekTalebi) => {
-    setSelected(t);
-
-    // sadece yanıt varsa okundu true yapalım
-    if (t.durum === "yanıtlandı" && !t.okundu) {
-      try {
-        await updateDoc(doc(db, "destek_talepleri", t.id), {
-          okundu: true,
-        });
-      } catch (e) {
-        console.error("okundu update hata:", e);
-      }
+  const handleDeleteTalep = async (id: string) => {
+    if (!confirm(t.confirm)) return;
+    try {
+      await deleteDoc(doc(db, "destek_talepleri", id));
+      setSelected(null);
+    } catch {
+      alert(t.deleteError);
     }
   };
 
-  // 🔹 Giriş yapılmamışsa yönlendirme
-  if (!user)
+  if (!user && !loadingData) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center text-gray-700">
-        <p className="text-center mb-3">Bu sayfayı kullanmak için giriş yapmalısınız.</p>
-        <Link
-          href="/giris"
-          className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-accent transition"
-        >
-          Giriş Yap
-        </Link>
-      </main>
+      <div className="min-h-screen flex items-center justify-center bg-[#FDFDFD]">
+        <Link href="/login">{t.login}</Link>
+      </div>
     );
+  }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-[1100px] mx-auto px-4 py-10">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">
-          💬 Sorun / Öneri Bildirimi
+    <div className="min-h-screen flex flex-col bg-[#FDFDFD]">
+      <Header />
+
+      <main className="flex-grow">
+  <div className="max-w-7xl mx-auto px-6 pt-32 pb-16">
+    
+    <div className="flex items-center gap-5 mb-10">
+      <Link href="/hesabim" className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 hover:bg-sky-50 transition-all group">
+        <ChevronLeft className="w-5 h-5 text-gray-400 group-hover:text-[#00AEEF]" />
+      </Link>
+      <div>
+        <h1 className="text-xl font-semibold text-gray-900 tracking-tight uppercase">
+          {t.title}
         </h1>
+        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-[1.5px] mt-1">
+          {t.subtitle}
+        </p>
+      </div>
+    </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* SOL: Talepler listesi */}
-          <aside className="bg-white border rounded-2xl shadow-sm p-4 max-h-[520px] overflow-y-auto">
-            <h2 className="font-semibold text-gray-800 mb-3">📌 Taleplerim</h2>
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
 
-            {talepler.length === 0 ? (
-              <p className="text-sm text-gray-500">Henüz bir talebiniz yok.</p>
+      {/* SOL */}
+      <aside className="lg:col-span-4">
+        <div className="bg-white border border-gray-100 rounded-[40px] shadow-2xl shadow-gray-200/20 overflow-hidden flex flex-col h-[700px]">
+          <div className="p-8 border-b border-gray-50 flex items-center justify-between shrink-0">
+            <h3 className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+              <History className="w-4 h-4" /> {t.history}
+            </h3>
+            <span className="bg-sky-50 text-[#00AEEF] text-[10px] font-bold px-3 py-1 rounded-full">
+              {talepler.length}
+            </span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+            {loadingData ? (
+              <div className="flex justify-center py-20">
+                <Loader2 className="w-6 h-6 text-sky-200 animate-spin" />
+              </div>
+            ) : talepler.length === 0 ? (
+              <div className="py-20 text-center">
+                <LifeBuoy className="w-10 h-10 text-gray-100 mx-auto mb-4" />
+                <p className="text-xs text-gray-400 font-medium italic">
+                  {t.empty}
+                </p>
+              </div>
             ) : (
-              <div className="space-y-2">
-                {talepler.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => handleOpenTalep(t)}
-                    className={`w-full text-left p-3 rounded-xl border transition ${
-                      selected?.id === t.id
-                        ? "border-primary bg-blue-50"
-                        : "border-gray-200 hover:bg-gray-50"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-semibold text-gray-900 line-clamp-1">
-                        {t.baslik || "(Başlıksız)"}
-                      </p>
-
-                      {t.durum === "yanıtlandı" ? (
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full ${
-                            t.okundu ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                          }`}
-                        >
-                          {t.okundu ? "Yanıtlandı" : "Yeni Yanıt"}
-                        </span>
-                      ) : (
-                        <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">
-                          Beklemede
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formatDate(t.olusturmaTarihi)}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            )}
-          </aside>
-
-          {/* ORTA+SAĞ: Detay */}
-          <section className="md:col-span-2 space-y-6">
-            {/* Form */}
-            <form
-              onSubmit={handleSubmit}
-              className="bg-white border rounded-2xl shadow-sm p-6 space-y-5"
-            >
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">
-                  Başlık
-                </label>
-                <input
-                  type="text"
-                  value={baslik}
-                  onChange={(e) => setBaslik(e.target.value)}
-                  placeholder="Kısa bir başlık yazın (ör. Ödeme sorunu)"
-                  className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-primary outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">
-                  Mesajınız
-                </label>
-                <textarea
-                  rows={5}
-                  value={mesaj}
-                  onChange={(e) => setMesaj(e.target.value)}
-                  placeholder="Yaşadığınız sorunu veya önerinizi detaylıca yazın..."
-                  className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-primary outline-none"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className={`w-full text-white font-semibold py-2 rounded-lg transition ${
-                  loading ? "bg-gray-400" : "bg-primary hover:bg-accent"
-                }`}
-              >
-                {loading ? "Gönderiliyor..." : "Gönder"}
-              </button>
-
-              {success && (
-                <p
-                  className={`mt-4 text-sm font-medium ${
-                    success.startsWith("✅") ? "text-green-600" : "text-red-600"
+              talepler.map((tItem) => (
+                <button
+                  key={tItem.id}
+                  onClick={() => handleOpenTalep(tItem)}
+                  className={`w-full text-left p-5 rounded-[28px] border-2 transition-all duration-300 group relative ${
+                    selected?.id === tItem.id
+                      ? "border-[#00AEEF] bg-sky-50/30 shadow-lg shadow-sky-100/50"
+                      : "border-transparent bg-gray-50/50 hover:bg-white hover:border-gray-100"
                   }`}
                 >
-                  {success}
-                </p>
-              )}
-            </form>
-
-            {/* Detay panel */}
-            <div className="bg-white border rounded-2xl shadow-sm p-6">
-              {!selected ? (
-                <p className="text-gray-500 text-sm text-center">
-                  Soldan bir talep seçerek detayını ve varsa yanıtı görebilirsin.
-                </p>
-              ) : (
-                <>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900">
-                        {selected.baslik}
-                      </h2>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {formatDate(selected.olusturmaTarihi)}
-                      </p>
-                    </div>
-
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full ${
-                        selected.durum === "yanıtlandı"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {selected.durum === "yanıtlandı" ? "Yanıtlandı" : "Beklemede"}
+                  <div className="flex justify-between items-start mb-3">
+                    <span className={`text-[9px] font-bold px-2.5 py-1 rounded-full uppercase tracking-tighter ${
+                      tItem.durum === "yanıtlandı"
+                        ? (tItem.okundu ? "bg-green-100 text-green-600" : "bg-[#FF6B00] text-white animate-pulse")
+                        : "bg-gray-200 text-gray-500"
+                    }`}>
+                      {tItem.durum === "yanıtlandı"
+                        ? (tItem.okundu ? t.answered : t.newReply)
+                        : t.pending}
                     </span>
+                    <Clock className="w-3.5 h-3.5 text-gray-300" />
                   </div>
 
-                  <div className="mt-4">
-                    <p className="font-semibold text-gray-700 mb-1">Mesajın:</p>
-                    <p className="text-sm text-gray-700 whitespace-pre-line">
-                      {selected.mesaj}
-                    </p>
-                  </div>
+                  <p className={`text-[13px] font-semibold truncate mb-1 ${selected?.id === tItem.id ? "text-[#00AEEF]" : "text-gray-800"}`}>
+                    {tItem.baslik}
+                  </p>
 
-                  <hr className="my-5" />
-
-                  <div>
-                    <p className="font-semibold text-gray-700 mb-1">Admin Yanıtı:</p>
-
-                    {selected.yanit ? (
-                      <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                        <p className="text-sm text-gray-800 whitespace-pre-line">
-                          {selected.yanit}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-2">
-                          {formatDate(selected.yanitTarihi)}
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500">
-                        Henüz yanıt gelmedi. Talebin inceleniyor.
-                      </p>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          </section>
+                  <p className="text-[10px] text-gray-400 font-medium uppercase">
+                    {formatDate(tItem.olusturmaTarihi)}
+                  </p>
+                </button>
+              ))
+            )}
+          </div>
         </div>
+      </aside>
+
+      {/* SAĞ */}
+      <div className="lg:col-span-8 space-y-8">
+
+        {/* FORM */}
+        <div className="bg-white border border-gray-100 rounded-[40px] shadow-2xl shadow-gray-200/20 p-10 relative overflow-hidden group">
+          <div className="absolute -top-6 -right-6 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity duration-700 pointer-events-none">
+            <MessageSquare className="w-40 h-40" />
+          </div>
+
+          <form onSubmit={handleSubmit} className="relative z-10 space-y-8">
+
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-[#00AEEF] text-white rounded-2xl flex items-center justify-center shadow-xl shadow-sky-100">
+                <Send className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 tracking-tight">
+                  {t.newReq}
+                </h3>
+                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
+                  {t.newReqDesc}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <input
+                value={baslik}
+                onChange={(e) => setBaslik(e.target.value)}
+                placeholder={t.placeholderTitle}
+                className="w-full bg-gray-50/50 border border-gray-100 rounded-2xl px-6 py-4"
+              />
+
+              <textarea
+                value={mesaj}
+                onChange={(e) => setMesaj(e.target.value)}
+                placeholder={t.placeholderMsg}
+                className="w-full bg-gray-50/50 border border-gray-100 rounded-2xl px-6 py-5"
+              />
+            </div>
+
+            <button>{t.send}</button>
+          </form>
+        </div>
+
+        {/* DETAY */}
+        {!selected && (
+          <p>{t.select}</p>
+        )}
+
       </div>
-    </main>
+    </div>
+  </div>
+</main>
+      <Footer />
+    </div>
   );
 }

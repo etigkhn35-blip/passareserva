@@ -1,107 +1,172 @@
-// app/sss/page.tsx
-import type { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Sıkça Sorulan Sorular | tatilinidevret",
-  description:
-    "tatilinidevret hakkında en sık sorulan sorular ve yanıtları: ilan verme, onay süreci, ücretler, güvenlik, kurumsal üyelik ve daha fazlası.",
-};
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import Link from "next/link";
+import { useLanguage } from "@/context/LanguageContext";
 
-const faqs = [
-  {
-    q: "tatilinidevret nedir?",
-    a: "Planları değişen kişilerin, kullanamayacakları tatil rezervasyonlarını başka kişilere devredebildiği bir ilan platformudur.",
-  },
-  {
-    q: "Hangi tatiller devredilebilir?",
-    a: "Otel rezervasyonları (isim değişikliğine izin veren), villa ve yazlık kiralamalar, Airbnb & Booking rezervasyonları, cruise turları, yurtiçi otobüs/ulaşım dahil olmayan tur paketleri, festival/konser gibi etkinlik+konaklama paketleri.",
-  },
-  {
-    q: "Uçak bileti devredebilir miyim?",
-    a: "Hayır. Şimdilik yalnızca uçaksız tatiller ve devredilebilir rezervasyonlar yayınlanabilmektedir.",
-  },
-  {
-    q: "İlan vermek ücretli mi?",
-    a: "İlk ilan 15 gün boyunca ücretsizdir. Sonrasında aylık 350 TL karşılığında ilan verebilirsiniz. İstersen ilanını öne çıkarabilir, vitrinde sergileyebilir veya özel rozetlerle dikkat çekebilirsiniz.",
-  },
-  {
-    q: "İlanım nasıl onaylanıyor?",
-    a: "Her ilan, yüklediğiniz voucher/rezervasyon belgesi kontrol edildikten sonra onaylanır ve yayına alınır.",
-  },
-  {
-    q: "Ödemeyi tatilinidevret üzerinden mi alıyorum?",
-    a: "Hayır. tatilinidevret sadece ilan platformudur. Devir işlemleri ve ödemeler tamamen tarafların sorumluluğundadır.",
-  },
-  {
-    q: "Yanıltıcı veya sahte ilan görürsem ne yapmalıyım?",
-    a: "İlan sayfasındaki “Rapor Et” butonunu kullanabilirsiniz. İnceleme sonrası sahte ilanlar yayından kaldırılır.",
-  },
-  {
-    q: "İlanımın süresi dolunca ne olur?",
-    a: "İlanınız yayından kalkar. Dilersen tekrar yenileyebilir ve ücret ödeyerek yeniden yayımlayabilirsiniz.",
-  },
-  {
-    q: "Kurumsal üyelik var mı?",
-    a: "Evet, villa sahipleri veya acenteler için özel paketler sunuyoruz. Detaylar için bizimle iletişime geçebilirsiniz.",
-  },
-  {
-    q: "Üyelik bilgilerim güvende mi?",
-    a: "Evet. KVKK kapsamında bilgileriniz gizli tutulur ve üçüncü kişilerle paylaşılmaz.",
-  },
-];
+export default function FAQPage() {
+  const { lang } = useLanguage();
 
-export default function SSSPage() {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: faqs.map((f) => ({
-      "@type": "Question",
-      name: f.q,
-      acceptedAnswer: { "@type": "Answer", text: f.a },
-    })),
-  };
+  const content =
+    lang === "en"
+      ? {
+          title: "Frequently Asked Questions",
+          subtitle:
+            "Find quick answers about PassaReserva.",
+          contactTitle: "Still need help?",
+          contactDesc:
+            "If you couldn't find your answer, our support team is ready to help.",
+          contactBtn: "Contact Us",
+          faqs: [
+            {
+              q: "What is PassaReserva?",
+              a: "It is a marketplace where users can transfer unused travel reservations to others.",
+            },
+            {
+              q: "What types of vacations can be transferred?",
+              a: "Hotel bookings, villas, Airbnb reservations, cruises, tour packages, and event packages.",
+            },
+            {
+              q: "Can I transfer flight tickets?",
+              a: "No. Currently, only non-flight reservations are supported.",
+            },
+            {
+              q: "Is posting a listing paid?",
+              a: "The first listing is free for 15 days. After that, a monthly fee applies.",
+            },
+            {
+              q: "How are listings approved?",
+              a: "Listings are reviewed and approved after verifying uploaded reservation documents.",
+            },
+            {
+              q: "Does the platform handle payments?",
+              a: "No. Payments are handled directly between users.",
+            },
+            {
+              q: "What if I see a fake listing?",
+              a: "You can report it using the report button on the listing page.",
+            },
+            {
+              q: "What happens when my listing expires?",
+              a: "It is removed from listing. You can renew it anytime.",
+            },
+            {
+              q: "Is there a business membership?",
+              a: "Yes. Special packages are available for agencies and property owners.",
+            },
+            {
+              q: "Is my data secure?",
+              a: "Yes. Your data is protected and never shared with third parties.",
+            },
+          ],
+        }
+      : {
+          title: "Perguntas Frequentes",
+          subtitle:
+            "Encontre respostas rápidas sobre o PassaReserva.",
+          contactTitle: "Precisa de ajuda?",
+          contactDesc:
+            "Se não encontrou sua resposta, nossa equipe está pronta para ajudar.",
+          contactBtn: "Fale Conosco",
+          faqs: [
+            {
+              q: "O que é PassaReserva?",
+              a: "É uma plataforma onde usuários transferem reservas de viagem não utilizadas.",
+            },
+            {
+              q: "Quais tipos de férias podem ser transferidos?",
+              a: "Hotéis, vilas, Airbnb, cruzeiros, pacotes turísticos e eventos.",
+            },
+            {
+              q: "Posso transferir passagens aéreas?",
+              a: "Não. Apenas reservas sem voo são suportadas.",
+            },
+            {
+              q: "Publicar anúncio é pago?",
+              a: "O primeiro anúncio é gratuito por 15 dias.",
+            },
+            {
+              q: "Como os anúncios são aprovados?",
+              a: "Após verificação dos documentos enviados.",
+            },
+            {
+              q: "A plataforma processa pagamentos?",
+              a: "Não. Pagamentos são entre usuários.",
+            },
+            {
+              q: "E se eu vir anúncio falso?",
+              a: "Use o botão de denúncia.",
+            },
+            {
+              q: "O que acontece quando expira?",
+              a: "O anúncio sai do ar.",
+            },
+            {
+              q: "Existe plano empresarial?",
+              a: "Sim, para empresas e proprietários.",
+            },
+            {
+              q: "Meus dados estão seguros?",
+              a: "Sim, protegidos e não compartilhados.",
+            },
+          ],
+        };
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      {/* JSON-LD for SEO */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <section className="mx-auto max-w-3xl px-4 py-10">
-        <h1 className="text-3xl font-bold text-gray-900">Sıkça Sorulan Sorular</h1>
-        <p className="mt-2 text-gray-600">
-          tatilinidevret hakkında aklına takılanları burada hızlıca bulabilirsin.
-        </p>
+    <div className="min-h-screen flex flex-col bg-white">
+      <Header />
 
-        <div className="mt-8 space-y-3">
-          {faqs.map((item, i) => (
-            <details
-              key={i}
-              className="group rounded-2xl border border-gray-200 bg-white p-4 open:shadow-sm"
+      <main className="flex-grow bg-[#F8FAFC]">
+        <section className="mx-auto max-w-3xl px-6 py-16 md:py-24">
+          
+          <div className="text-center mb-16">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-slate-800 tracking-tight">
+              {content.title}
+            </h1>
+            <p className="mt-4 text-slate-500 font-light text-lg">
+              {content.subtitle}
+            </p>
+            <div className="h-1 w-16 bg-sky-400/50 mx-auto mt-6 rounded-full"></div>
+          </div>
+
+          <div className="space-y-4">
+            {content.faqs.map((item, i) => (
+              <details
+                key={i}
+                className="group rounded-3xl border bg-white p-6 md:p-8"
+              >
+                <summary className="flex cursor-pointer justify-between">
+                  <span className="text-lg font-bold">
+                    {item.q}
+                  </span>
+                  <span>+</span>
+                </summary>
+                <div className="mt-6 text-slate-500">
+                  {item.a}
+                </div>
+              </details>
+            ))}
+          </div>
+
+          <div className="mt-16 text-center">
+            <h3 className="text-xl font-bold">
+              {content.contactTitle}
+            </h3>
+            <p className="text-gray-500 mt-2">
+              {content.contactDesc}
+            </p>
+            <Link
+              href="/iletisim"
+              className="inline-block mt-6 bg-orange-500 text-white px-6 py-3 rounded-xl"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
-                <span className="text-lg font-semibold text-gray-900">{item.q}</span>
-                <span className="select-none rounded-full border px-2 py-0.5 text-sm text-gray-500 group-open:hidden">
-                  +
-                </span>
-                <span className="select-none rounded-full border px-2 py-0.5 text-sm text-gray-500 hidden group-open:inline">
-                  –
-                </span>
-              </summary>
-              <div className="mt-3 text-gray-700 leading-relaxed">{item.a}</div>
-            </details>
-          ))}
-        </div>
+              {content.contactBtn}
+            </Link>
+          </div>
+        </section>
+      </main>
 
-        <div className="mt-10 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
-          İhtiyacın olan yanıtı bulamadın mı?{" "}
-          <a href="/iletisim" className="underline underline-offset-4">
-            Bizimle iletişime geç
-          </a>
-          .
-        </div>
-      </section>
-    </main>
+      <Footer />
+    </div>
   );
 }

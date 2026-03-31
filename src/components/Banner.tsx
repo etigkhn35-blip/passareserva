@@ -3,7 +3,7 @@ export default function Banner() {
     <div className="w-full mb-8">
       <img
         src="/banner.png"
-        alt="Tatilini Devret Banner"
+        alt="Passa Reserva Banner"
         className="w-full h-72 object-cover rounded-lg shadow-md"
       />
     </div>

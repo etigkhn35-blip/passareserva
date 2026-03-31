@@ -7,6 +7,6 @@ export default function robots() {
         disallow: ["/admin", "/hesabim", "/mesajlar"],
       },
     ],
-    sitemap: "https://tatilinidevret.com/sitemap.xml",
+    sitemap: "https://passareserva.com/sitemap.xml",
   };
 }

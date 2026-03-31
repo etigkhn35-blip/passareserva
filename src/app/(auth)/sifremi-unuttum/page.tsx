@@ -4,8 +4,42 @@ import { useState } from "react";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebaseConfig";
 import Link from "next/link";
+import { useLanguage } from "@/context/LanguageContext";
+
+/* ---------------- LANGUAGE ---------------- */
+const translations = {
+  en: {
+    title: "Forgot Password",
+    email: "Email address",
+    placeholder: "example@mail.com",
+    send: "Send Reset Email",
+    sending: "Sending...",
+    success:
+      "Password reset link has been sent. Please check your inbox and spam folder.",
+    notFound: "No user found with this email.",
+    invalid: "Invalid email address.",
+    error: "Failed to send reset email. Please try again.",
+    back: "Back to Login",
+  },
+  pt: {
+    title: "Esqueceu a Senha",
+    email: "Endereço de email",
+    placeholder: "exemplo@mail.com",
+    send: "Enviar email",
+    sending: "Enviando...",
+    success:
+      "Link de redefinição enviado. Verifique sua caixa de entrada e spam.",
+    notFound: "Nenhum usuário encontrado com este email.",
+    invalid: "Email inválido.",
+    error: "Falha ao enviar email. Tente novamente.",
+    back: "Voltar ao Login",
+  },
+};
 
 export default function SifremiUnuttumPage() {
+  const { lang } = useLanguage();
+  const t = translations[lang];
+
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -18,20 +52,15 @@ export default function SifremiUnuttumPage() {
     try {
       await sendPasswordResetEmail(auth, email);
 
-      setMessage(
-        "📩 Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Gelen kutunuzu ve spam klasörünü kontrol edin."
-      );
-
+      setMessage("📩 " + t.success);
       setEmail("");
     } catch (err: any) {
-      console.error("Şifre sıfırlama hatası:", err);
-
       if (err.code === "auth/user-not-found") {
-        setMessage("❌ Bu e-posta ile kayıtlı kullanıcı bulunamadı.");
+        setMessage("❌ " + t.notFound);
       } else if (err.code === "auth/invalid-email") {
-        setMessage("❌ Geçersiz e-posta adresi.");
+        setMessage("❌ " + t.invalid);
       } else {
-        setMessage("❌ Şifre sıfırlama maili gönderilemedi. Lütfen tekrar deneyin.");
+        setMessage("❌ " + t.error);
       }
     } finally {
       setLoading(false);
@@ -41,18 +70,21 @@ export default function SifremiUnuttumPage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
+
+        {/* LOGO */}
         <h1 className="text-center text-2xl font-bold mb-6">
-          <span className="text-primary">tatilini</span>
-          <span className="text-accent">devret</span>
+          <span className="text-[#00AEEF]">passa</span>
+          <span className="text-[#FF6B00]">reserva</span>
         </h1>
 
         <h2 className="text-xl font-semibold text-center mb-6 text-gray-800">
-          Şifremi Unuttum
+          {t.title}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            E-posta adresi
+
+          <label className="block text-sm font-medium text-gray-700">
+            {t.email}
           </label>
 
           <input
@@ -60,28 +92,28 @@ export default function SifremiUnuttumPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="ornek@mail.com"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none"
+            placeholder={t.placeholder}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2"
           />
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold"
+            className="w-full bg-[#00AEEF] text-white py-2 rounded-lg font-semibold"
           >
-            {loading ? "Gönderiliyor..." : "Şifre Sıfırlama Maili Gönder"}
+            {loading ? t.sending : t.send}
           </button>
         </form>
 
         {message && (
-          <p className="text-center mt-4 text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-200">
+          <p className="text-center mt-4 text-sm bg-gray-50 p-3 rounded-lg border">
             {message}
           </p>
         )}
 
         <p className="text-center text-sm text-gray-600 mt-6">
-          <Link href="/giris" className="text-primary hover:underline">
-            ← Giriş Sayfasına Dön
+          <Link href="/giris" className="text-[#00AEEF]">
+            ← {t.back}
           </Link>
         </p>
       </div>

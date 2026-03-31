@@ -16,14 +16,61 @@ import {
 } from "firebase/auth";
 import { auth, db } from "@/lib/firebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
+import { useLanguage } from "@/context/LanguageContext";
+
+/* ---------------- LANGUAGE ---------------- */
+const translations = {
+  en: {
+    title: "Create Account",
+    name: "Full Name",
+    email: "Email",
+    phone: "Phone",
+    password: "Password",
+    register: "Register",
+    loading: "Registering...",
+    haveAccount: "Already have an account?",
+    login: "Login",
+    success:
+      "Registration successful! Please verify your email before logging in.",
+    phoneError: "Phone must start with 05 and be 11 digits.",
+    phoneUsed: "This phone number is already used.",
+    emailUsed: "This email is already used.",
+    invalidEmail: "Invalid email format.",
+    weakPassword: "Password must be at least 6 characters.",
+    error: "An error occurred.",
+  },
+  pt: {
+    title: "Criar Conta",
+    name: "Nome completo",
+    email: "Email",
+    phone: "Telefone",
+    password: "Senha",
+    register: "Registrar",
+    loading: "Registrando...",
+    haveAccount: "Já tem uma conta?",
+    login: "Entrar",
+    success:
+      "Registro concluído! Verifique seu email antes de entrar.",
+    phoneError: "Telefone deve começar com 05 e ter 11 dígitos.",
+    phoneUsed: "Este telefone já está em uso.",
+    emailUsed: "Este email já está em uso.",
+    invalidEmail: "Email inválido.",
+    weakPassword: "Senha deve ter pelo menos 6 caracteres.",
+    error: "Ocorreu um erro.",
+  },
+};
 
 export default function RegisterPage() {
- const [form, setForm] = useState({
-  adSoyad: "",
-  email: "",
-  telefon: "",
-  sifre: "",
-});
+  const { lang } = useLanguage();
+  const t = translations[lang];
+
+  const [form, setForm] = useState({
+    adSoyad: "",
+    email: "",
+    telefon: "",
+    sifre: "",
+  });
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
@@ -32,184 +79,141 @@ export default function RegisterPage() {
     setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e: any) => {
-  e.preventDefault();
-  setLoading(true);
-  setMessage(null);
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
 
-  try {
-    // 📞 Telefon format kontrolü
-    if (!/^05\d{9}$/.test(form.telefon)) {
-      throw new Error(
-        "Telefon numarası 05xx ile başlamalı ve 11 haneli olmalıdır."
+    try {
+      if (!/^05\d{9}$/.test(form.telefon)) {
+        throw new Error(t.phoneError);
+      }
+
+      const phoneQuery = query(
+        collection(db, "users"),
+        where("telefon", "==", form.telefon)
       );
+
+      const phoneSnap = await getDocs(phoneQuery);
+      if (!phoneSnap.empty) {
+        throw new Error(t.phoneUsed);
+      }
+
+      const { user } = await createUserWithEmailAndPassword(
+        auth,
+        form.email,
+        form.sifre
+      );
+
+      await updateProfile(user, {
+        displayName: form.adSoyad,
+      });
+
+      await setDoc(doc(db, "users", user.uid), {
+        adSoyad: form.adSoyad,
+        email: form.email,
+        telefon: form.telefon,
+        role: "user",
+        emailVerified: false,
+        phoneVerified: false,
+        createdAt: new Date(),
+      });
+
+      await sendEmailVerification(user);
+
+      setMessage("✅ " + t.success);
+    } catch (err: any) {
+      let errorMsg = t.error;
+
+      if (err.code === "auth/email-already-in-use") {
+        errorMsg = t.emailUsed;
+      } else if (err.code === "auth/invalid-email") {
+        errorMsg = t.invalidEmail;
+      } else if (err.code === "auth/weak-password") {
+        errorMsg = t.weakPassword;
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+
+      setMessage("⚠️ " + errorMsg);
+    } finally {
+      setLoading(false);
     }
-
-    // 🔍 Telefon daha önce kullanılmış mı?
-    const phoneQuery = query(
-      collection(db, "users"),
-      where("telefon", "==", form.telefon)
-    );
-
-    const phoneSnap = await getDocs(phoneQuery);
-    if (!phoneSnap.empty) {
-      throw new Error("Bu telefon numarası zaten kullanılıyor.");
-    }
-
-    // 👤 Firebase Auth kullanıcı oluştur
-    const { user } = await createUserWithEmailAndPassword(
-      auth,
-      form.email,
-      form.sifre
-    );
-
-    // 👤 Profil güncelle
-    await updateProfile(user, {
-      displayName: form.adSoyad,
-    });
-
-    // 🗂 Firestore user kaydı
-    await setDoc(doc(db, "users", user.uid), {
-      adSoyad: form.adSoyad,
-      email: form.email,
-      telefon: form.telefon,
-      role: "user",
-      emailVerified: false,
-      phoneVerified: false,
-      createdAt: new Date(),
-    });
-
-    // 📩 Email doğrulama gönder
-    await sendEmailVerification(user);
-
-setMessage(
- "📩 Kayıt başarılı! E-posta adresinize doğrulama maili gönderdik. " +
-  "Lütfen maildeki linke tıklayıp hesabınızı doğrulayın. " +
-  "Doğrulama yaptıktan sonra giriş yapabilirsiniz."
-);
-
-
-
-    
-  } catch (err: any) {
-  console.error("❌ Kayıt hatası:", err);
-
-  let errorMsg = "Bir hata oluştu.";
-
-  // 🔴 Firebase Auth hataları ÖNCE
-  if (err.code === "auth/email-already-in-use") {
-    errorMsg = "Bu e-posta adresi zaten kullanılıyor.";
-  } else if (err.code === "auth/invalid-email") {
-    errorMsg = "Geçersiz e-posta formatı.";
-  } else if (err.code === "auth/weak-password") {
-    errorMsg = "Şifre en az 6 karakter olmalıdır.";
-
-  // 🟢 Bizim throw ettiğimiz hatalar
-  } else if (err.message) {
-    errorMsg = err.message;
-  }
-
-  setMessage("⚠️ " + errorMsg);
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
+
+        {/* LOGO */}
         <h1 className="text-center text-2xl font-bold mb-6">
-          <span className="text-primary">tatilini</span>
-          <span className="text-accent">devret</span>
+          <span className="text-[#00AEEF]">passa</span>
+          <span className="text-[#FF6B00]">reserva</span>
         </h1>
+
         <h2 className="text-xl font-semibold text-center mb-6 text-gray-800">
-          Hesap Aç
+          {t.title}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Ad Soyad */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ad Soyad
-            </label>
-            <input
-              name="adSoyad"
-              required
-              value={form.adSoyad}
-              onChange={handleChange}
-              placeholder="Ad Soyad"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none"
-            />
-          </div>
-          
 
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              E-posta
-            </label>
-            <input
-              type="email"
-              name="email"
-              required
-              value={form.email}
-              onChange={handleChange}
-              placeholder="ornek@email.com"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none"
-            />
-          </div>
-          {/* Telefon */}
-<div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Telefon
-  </label>
-  <input
-    type="tel"
-    name="telefon"
-    required
-    value={form.telefon}
-    onChange={handleChange}
-    placeholder="05xx xxx xx xx"
-    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none"
-  />
-</div>
+          <input
+            name="adSoyad"
+            required
+            value={form.adSoyad}
+            onChange={handleChange}
+            placeholder={t.name}
+            className="w-full border rounded-lg px-3 py-2"
+          />
 
-          {/* Şifre */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Şifre
-            </label>
-            <input
-              type="password"
-              name="sifre"
-              required
-              value={form.sifre}
-              onChange={handleChange}
-              placeholder="••••••••"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none"
-            />
-          </div>
+          <input
+            type="email"
+            name="email"
+            required
+            value={form.email}
+            onChange={handleChange}
+            placeholder={t.email}
+            className="w-full border rounded-lg px-3 py-2"
+          />
+
+          <input
+            type="tel"
+            name="telefon"
+            required
+            value={form.telefon}
+            onChange={handleChange}
+            placeholder="05xx xxx xx xx"
+            className="w-full border rounded-lg px-3 py-2"
+          />
+
+          <input
+            type="password"
+            name="sifre"
+            required
+            value={form.sifre}
+            onChange={handleChange}
+            placeholder={t.password}
+            className="w-full border rounded-lg px-3 py-2"
+          />
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary text-white py-2 rounded-lg font-semibold hover:bg-accent transition"
+            className="w-full bg-[#00AEEF] text-white py-2 rounded-lg font-semibold"
           >
-            {loading ? "Kayıt Yapılıyor..." : "Kayıt Ol"}
+            {loading ? t.loading : t.register}
           </button>
         </form>
 
-        {/* Mesaj */}
         {message && (
-          <p className="text-center mt-4 text-sm text-gray-700 bg-gray-50 p-2 rounded-lg border border-gray-200">
+          <p className="text-center mt-4 text-sm bg-gray-50 p-2 rounded">
             {message}
           </p>
         )}
 
         <p className="text-center text-sm text-gray-600 mt-6">
-          Zaten hesabın var mı?{" "}
-          <Link href="/giris" className="text-primary hover:underline">
-            Giriş Yap
+          {t.haveAccount}{" "}
+          <Link href="/giris" className="text-[#00AEEF]">
+            {t.login}
           </Link>
         </p>
       </div>

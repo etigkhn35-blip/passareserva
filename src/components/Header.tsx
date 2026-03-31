@@ -1,7 +1,6 @@
 "use client";
 
 import MobileTopbar from "./MobileTopBar";
-
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
@@ -18,7 +17,40 @@ import {
   DocumentData,
 } from "firebase/firestore";
 import Link from "next/link";
-import { Bell, Mail, Menu, X, Search } from "lucide-react";
+import { Bell, Mail, Menu, X, Search, LogOut, User as UserIcon, PlusCircle, ChevronRight } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
+
+/* ---------------- LANGUAGE ---------------- */
+const translations = {
+  en: {
+    search: "Search listings...",
+    login: "Login",
+    register: "Sign Up",
+    post: "Post Listing",
+    welcome: "Welcome",
+    advanced: "Advanced Search",
+    profile: "My Profile",
+    messages: "Messages",
+    logout: "Logout",
+    noNotif: "No notifications yet",
+    notif: "Notifications",
+    new: "New",
+  },
+  pt: {
+    search: "Pesquisar anúncios...",
+    login: "Entrar",
+    register: "Criar conta",
+    post: "Publicar anúncio",
+    welcome: "Bem-vindo",
+    advanced: "Busca avançada",
+    profile: "Perfil",
+    messages: "Mensagens",
+    logout: "Sair",
+    noNotif: "Nenhuma notificação",
+    notif: "Notificações",
+    new: "Novo",
+  },
+};
 
 interface NotificationDoc extends DocumentData {
   id: string;
@@ -34,29 +66,24 @@ interface NotificationDoc extends DocumentData {
 
 export default function Header() {
   const pathname = usePathname();
+  if (pathname.startsWith("/admin")) return null;
 
-  // 🔒 Admin sayfalarında header render edilmez
-  if (pathname.startsWith("/admin")) {
-    return null;
-  }
+  const { lang, setLang } = useLanguage();
+  const t = translations[lang];
 
   const [user, setUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [unreadCount, setUnreadCount] = useState<number>(0);
-
   const [notifCount, setNotifCount] = useState<number>(0);
   const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
   const [openNotif, setOpenNotif] = useState<boolean>(false);
-
   const [mobileMenu, setMobileMenu] = useState(false);
 
-  // 🔊 Bildirim sesi
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const firstLoadRef = useRef(true);
   const prevUnreadRef = useRef(0);
   const unlockedRef = useRef(false);
 
-  // 🔍 Arama
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const q = searchTerm.trim();
@@ -64,151 +91,115 @@ export default function Header() {
     window.location.href = `/arama?q=${encodeURIComponent(q)}`;
   };
 
-  // 👤 Auth
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (currentUser) =>
-      setUser(currentUser)
-    );
+    const unsubAuth = onAuthStateChanged(auth, (currentUser) => setUser(currentUser));
     return () => unsubAuth();
   }, []);
 
-  
   useEffect(() => {
-  if (!audioRef.current) {
-    audioRef.current = new Audio("/sounds/notification.mp3");
-    audioRef.current.preload = "auto";
-  }
+    if (!audioRef.current) {
+      audioRef.current = new Audio("/sounds/notification.mp3");
+      audioRef.current.preload = "auto";
+    }
 
-  const unlock = async () => {
-    if (unlockedRef.current) return;
-
-    try {
-      await audioRef.current?.play();
-      audioRef.current?.pause();
-      audioRef.current!.currentTime = 0;
-
+    const markInteraction = () => {
       unlockedRef.current = true;
-      console.log("🔓 Ses unlock oldu");
-    } catch (e) {
-      console.log("🔒 Ses hala kilitli (kullanıcı tıklaması lazım)");
-    }
-  };
+    };
 
-  window.addEventListener("click", unlock, { once: true });
-  return () => window.removeEventListener("click", unlock);
-}, []);
+    window.addEventListener("click", markInteraction, { once: true });
+    window.addEventListener("touchstart", markInteraction, { once: true });
 
+    return () => {
+      window.removeEventListener("click", markInteraction);
+      window.removeEventListener("touchstart", markInteraction);
+    };
+  }, []);
 
-// 🔔 Bildirim dinle + SES ÇAL
-useEffect(() => {
-  if (!user) return;
+  useEffect(() => {
+    if (!user) return;
 
-  if (!audioRef.current) {
-    audioRef.current = new Audio("/sounds/notification.mp3");
-    audioRef.current.preload = "auto";
-  }
+    const unsubConversations = onSnapshot(
+      query(collection(db, "conversations"), where("users", "array-contains", user.uid)),
+      (snap) => {
+        let unread = 0;
 
-  const q = query(
-    collection(db, "notifications"),
-    where("toUserUid", "==", user.uid),
-    orderBy("createdAt", "desc"),
-    limit(10)
-  );
+        snap.forEach((docSnap) => {
+          const data = docSnap.data();
+          const updatedAtMs = data.updatedAt?.toMillis?.() || 0;
+          const lastReadMs = data.lastRead?.[user.uid]?.toMillis?.() || 0;
+          const lastSenderId = data.lastSenderId || null;
 
-  const unsub = onSnapshot(q, (snap) => {
-    const list: NotificationDoc[] = snap.docs.map((d) => ({
-      ...(d.data() as NotificationDoc),
-      id: d.id,
-    }));
-
-    setNotifications(list);
-
-    const unread = list.filter((n) => !n.read).length;
-    setNotifCount(unread);
-
-    // ilk açılışta ses çalma
-    if (firstLoadRef.current) {
-      firstLoadRef.current = false;
-      prevUnreadRef.current = unread;
-      return;
-    }
-
-    // yeni bildirim geldiyse ses çal
-    if (unread > prevUnreadRef.current) {
-      const audio = audioRef.current;
-
-      if (audio && unlockedRef.current) {
-        audio.currentTime = 0;
-        audio.play().catch((err) => console.log("🔇 Ses çalamadı:", err));
-      } else {
-        console.log("🔒 Ses unlock edilmediği için çalmadı");
-      }
-    }
-
-    prevUnreadRef.current = unread;
-  });
-
-  return () => unsub();
-}, [user]);
-
-
-const handleNotificationClick = async (n: NotificationDoc) => {
-  if (!user) return;
-
-  try {
-    if (!n.id) return;
-
-    // ✅ 1) Okundu işaretle (önce users/{uid}/notifications dene)
-    try {
-      await updateDoc(doc(db, "users", user.uid, "notifications", n.id), {
-        read: true,
-      });
-    } catch (err) {
-      // 🔁 Eğer orada yoksa ana koleksiyonda dene
-      try {
-        await updateDoc(doc(db, "notifications", n.id), {
-          read: true,
+          if (lastSenderId && lastSenderId !== user.uid && updatedAtMs > lastReadMs) {
+            unread += 1;
+          }
         });
-      } catch (err2) {
-        console.warn("Bildirim okundu işaretlenemedi:", err2);
+
+        setUnreadCount(unread);
       }
-    }
+    );
 
-    // ✅ 2) Destek yanıtı → Geri Bildirim sayfası
-    if (n.type === "support_reply" || n.type === "destek") {
-      window.location.href = "/hesabim/geri-bildirim";
-      return;
-    }
+    return () => unsubConversations();
+  }, [user]);
 
-    // ✅ 3) Mesaj bildirimi → Mesajlarım
-    if (n.type === "message") {
-      window.location.href = "/hesabim/mesajlar";
-      return;
-    }
+  useEffect(() => {
+    if (!user) return;
 
-    // ✅ 4) İlan bildirimleri → ilan sayfası
-    if (n.type === "ilan" || n.type?.startsWith("ilan_")) {
-      window.location.href = n.ilanId
-        ? `/ilan/${encodeURIComponent(n.ilanId)}`
-        : "/hesabim";
-      return;
-    }
+    const q = query(
+      collection(db, "users", user.uid, "notifications"),
+      orderBy("createdAt", "desc"),
+      limit(10)
+    );
 
-    // ✅ 5) Bildirimde path varsa oraya git
-    if (n.path) {
-      window.location.href = n.path;
-      return;
-    }
+    const unsub = onSnapshot(q, (snap) => {
+      const list: NotificationDoc[] = snap.docs.map((d) => ({
+        ...(d.data() as NotificationDoc),
+        id: d.id,
+      }));
 
-    // fallback
-    window.location.href = "/hesabim";
-  } catch (e) {
-    console.error("Bildirim tıklama hatası:", e);
-  } finally {
-    setOpenNotif(false);
-    setMobileMenu(false);
-  }
-};
+      setNotifications(list);
+
+      const unread = list.filter((n) => !n.read).length;
+      setNotifCount(unread);
+
+      if (firstLoadRef.current) {
+        firstLoadRef.current = false;
+        prevUnreadRef.current = unread;
+        return;
+      }
+
+      if (
+        unread > prevUnreadRef.current &&
+        audioRef.current &&
+        unlockedRef.current &&
+        document.visibilityState === "visible"
+      ) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(() => {});
+      }
+
+      prevUnreadRef.current = unread;
+    });
+
+    return () => unsub();
+  }, [user]);
+
+  const handleOpenNotifications = async () => {
+    setOpenNotif((prev) => !prev);
+
+    if (!user) return;
+
+    const unreadNotifications = notifications.filter((n) => !n.read);
+
+    if (unreadNotifications.length === 0) return;
+
+    await Promise.all(
+      unreadNotifications.map((n) =>
+        updateDoc(doc(db, "users", user.uid, "notifications", n.id), {
+          read: true,
+        })
+      )
+    );
+  };
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -217,295 +208,120 @@ const handleNotificationClick = async (n: NotificationDoc) => {
 
   const displayName = useMemo(() => {
     if (!user) return "";
-    return user.displayName || user.email?.split("@")[0] || "Kullanıcı";
+    return user.displayName || user.email?.split("@")[0] || "User";
   }, [user]);
 
-  // ✅ Aynı arama formu
   const searchForm = (
-    <form onSubmit={handleSearch} className="flex items-center w-full max-w-2xl">
+    <form onSubmit={handleSearch} className="relative w-full">
       <input
-        type="text"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        placeholder="İlan ara..."
-        className="w-full border border-gray-300 rounded-l-lg px-3 py-2 text-[13px] focus:ring-2 focus:ring-[color:#00AEEF] outline-none"
+        placeholder={t.search}
+        className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-4 pr-12 py-2.5 text-sm"
       />
-      <button
-        type="submit"
-        className="bg-[color:#00AEEF] text-white px-3 py-2 rounded-r-lg hover:opacity-90 transition"
-        aria-label="Ara"
-      >
+      <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-[#00AEEF] text-white rounded-xl">
         <Search className="w-4 h-4" />
       </button>
     </form>
   );
 
-  const menuButton = (
-    <button
-      onClick={() => setMobileMenu((v) => !v)}
-      className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 text-gray-700"
-      aria-label="Menü"
-    >
-      {mobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-    </button>
-  );
-
   const ilanVerButton = (
-    <Link
-      href="/ilan-ver"
-      className="bg-[color:#FF6B00] text-white px-3 py-2 rounded-lg text-xs whitespace-nowrap hover:opacity-90 transition"
-    >
-      İlan Ver
+    <Link href="/ilan-ver" className="flex items-center gap-2 bg-[#FF6B00] text-white px-4 py-2.5 rounded-2xl text-[13px] font-bold">
+      <PlusCircle className="w-4 h-4" />
+      {t.post}
     </Link>
   );
 
   return (
     <>
-      <MobileTopbar
-        searchForm={searchForm}
-        menuButton={menuButton}
-        ilanVerButton={ilanVerButton}
-      />
+      <MobileTopbar searchForm={searchForm} menuButton={<button onClick={() => setMobileMenu(true)}><Menu /></button>} ilanVerButton={ilanVerButton} />
 
-      <header className="bg-white border-b border-gray-200 shadow-sm md:sticky md:top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center gap-3 justify-center md:justify-between">
-            <Link href="/" className="text-2xl font-semibold whitespace-nowrap">
-              <span style={{ color: "#00AEEF" }}>tatilini</span>
-              <span style={{ color: "#FF6B00" }}>devret</span>
-            </Link>
+      <header className="hidden md:block bg-white border-b border-gray-100 sticky top-0 z-[100]">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-8">
 
-            <div className="hidden md:flex flex-1 justify-center px-6">
-              {searchForm}
-            </div>
+          {/* LOGO */}
+          <Link href="/" className="text-3xl font-black tracking-tighter">
+            <span className="text-[#00AEEF]">passa</span>
+            <span className="text-[#FF6B00]">reserva</span>
+          </Link>
 
-            <div className="hidden md:flex items-center gap-4 text-[13.5px]">
-              {!user ? (
-                <>
-                  <Link href="/giris" className="hover:text-[color:#00AEEF]">
-                    Giriş Yap
-                  </Link>
-                  <Link
-                    href="/kayit"
-                    className="bg-[color:#00AEEF] text-white px-3 py-2 rounded-lg hover:opacity-90 transition"
-                  >
-                    Hesap Aç
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <span className="text-gray-700 hidden lg:inline">
-                    Hoş geldin, <strong>{displayName}</strong>
-                  </span>
+          {/* SEARCH */}
+          <div className="flex-1 max-w-xl">{searchForm}</div>
 
-                  <Link href="/hesabim" className="hover:text-[color:#00AEEF]">
-                    Hesabım
-                  </Link>
+        {/* RIGHT */}
+<div className="flex items-center gap-4">
 
-                  <Link
-                    href="/hesabim/mesajlar"
-                    className="relative hover:text-[color:#00AEEF]"
-                  >
-                    <Mail className="inline w-5 h-5 mr-1" />
-                    Mesajlarım
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-semibold rounded-full px-1.5 py-0.5 shadow">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </Link>
+  {/* LANGUAGE */}
+  <div className="flex bg-gray-100 rounded-full p-1 text-xs mr-2">
+    <button
+      onClick={() => setLang("en")}
+      className={`px-3 py-1 rounded-full transition ${
+        lang === "en"
+          ? "bg-white text-[#00AEEF] shadow"
+          : "text-gray-500"
+      }`}
+    >
+      EN
+    </button>
+    <button
+      onClick={() => setLang("pt")}
+      className={`px-3 py-1 rounded-full transition ${
+        lang === "pt"
+          ? "bg-white text-[#FF6B00] shadow"
+          : "text-gray-500"
+      }`}
+    >
+      PT
+    </button>
+  </div>
 
-                  {/* Bildirim */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setOpenNotif((v) => !v)}
-                      className="relative text-gray-800 hover:text-[color:#00AEEF]"
-                      aria-label="Bildirimler"
-                    >
-                      <Bell className="w-5 h-5" />
-                      {notifCount > 0 && (
-                        <span className="absolute -top-2 -right-1 bg-red-500 text-white text-[10px] font-semibold rounded-full px-1.5 py-0.5 shadow">
-                          {notifCount}
-                        </span>
-                      )}
-                    </button>
+  {!user ? (
+    <div className="flex items-center gap-3">
+      <Link href="/giris" className="text-[13px] font-bold text-gray-600 hover:text-[#00AEEF]">
+        {t.login}
+      </Link>
+      <Link
+        href="/kayit"
+        className="text-[13px] font-bold bg-[#00AEEF] text-white px-5 py-2.5 rounded-2xl hover:opacity-90 transition"
+      >
+        {t.register}
+      </Link>
+    </div>
+  ) : (
+    <div className="flex items-center gap-4">
 
-                    {openNotif && (
-                      <div className="absolute right-0 mt-3 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
-                        <div className="p-3 border-b font-medium text-gray-700 text-[13px]">
-                          Bildirimler
-                        </div>
+      {/* MAIL */}
+      <Link href="/hesabim/mesajlar" className="relative p-2.5 bg-gray-50 rounded-xl hover:bg-gray-100">
+        <Mail className="w-5 h-5 text-gray-600" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
+            {unreadCount}
+          </span>
+        )}
+      </Link>
 
-                        {notifications.length === 0 ? (
-                          <p className="p-4 text-[12.5px] text-gray-500 text-center">
-                            Henüz bildiriminiz yok.
-                          </p>
-                        ) : (
-                          <ul className="max-h-60 overflow-y-auto">
-                            {notifications.map((n) => (
-                              <li
-                                key={n.id}
-                                onClick={() => handleNotificationClick(n)}
-                                className={`px-4 py-2 text-[12.5px] border-b cursor-pointer transition ${
-                                  !n.read
-                                    ? "bg-gray-100 hover:bg-gray-50"
-                                    : "hover:bg-gray-50"
-                                }`}
-                              >
-                                <p className="font-medium text-gray-800">
-                                  {n.title || "Yeni bildirim"}
-                                </p>
-                                <p className="text-gray-600 text-sm">
-                                  {n.message || ""}
-                                </p>
-                                <span className="text-[11px] text-gray-400 block mt-1">
-                                  {n.createdAt?.toDate
-                                    ? new Date(
-                                        n.createdAt.toDate()
-                                      ).toLocaleString("tr-TR")
-                                    : ""}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    )}
-                  </div>
+      {/* BELL */}
+      <button onClick={handleOpenNotifications} className="p-2.5 bg-gray-50 rounded-xl hover:bg-gray-100">
+        <Bell className="w-5 h-5 text-gray-600" />
+      </button>
 
-                  <button
-                    onClick={handleLogout}
-                    className="text-red-600 hover:underline"
-                  >
-                    Çıkış
-                  </button>
+      {/* PROFILE LETTER */}
+      <Link href="/hesabim">
+        <div className="w-10 h-10 bg-[#00AEEF] rounded-xl flex items-center justify-center text-white font-bold text-sm">
+          {displayName[0].toUpperCase()}
+        </div>
+      </Link>
 
-                  <Link
-                    href="/ilan-ver"
-                    className="bg-[color:#FF6B00] text-white px-4 py-2 rounded-lg hover:opacity-90 transition"
-                  >
-                    İlan Ver
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
+      {/* POST */}
+      {ilanVerButton}
 
-          {/* MOBİL MENÜ */}
-          {mobileMenu && (
-            <div className="md:hidden mt-3 border border-gray-200 rounded-xl overflow-hidden bg-white">
-              <div className="p-3 flex flex-col gap-2 text-sm">
-                <Link
-                  href="/detayli-arama"
-                  className="px-3 py-2 rounded-lg hover:bg-gray-50"
-                >
-                  Detaylı Arama
-                </Link>
-
-                {!user ? (
-                  <>
-                    <Link
-                      href="/giris"
-                      className="px-3 py-2 rounded-lg hover:bg-gray-50"
-                    >
-                      Giriş Yap
-                    </Link>
-                    <Link
-                      href="/kayit"
-                      className="px-3 py-2 rounded-lg bg-[color:#00AEEF] text-white text-center"
-                    >
-                      Hesap Aç
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <div className="px-3 py-2 text-gray-700">
-                      Hoş geldin, <strong>{displayName}</strong>
-                    </div>
-
-                    <Link
-                      href="/hesabim"
-                      className="px-3 py-2 rounded-lg hover:bg-gray-50"
-                    >
-                      Hesabım
-                    </Link>
-
-                    <Link
-                      href="/hesabim/mesajlar"
-                      className="px-3 py-2 rounded-lg hover:bg-gray-50 flex items-center justify-between"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Mail className="w-4 h-4" /> Mesajlarım
-                      </span>
-                      {unreadCount > 0 && (
-                        <span className="bg-red-500 text-white text-[11px] font-semibold rounded-full px-2 py-0.5">
-                          {unreadCount}
-                        </span>
-                      )}
-                    </Link>
-
-                    <button
-                      onClick={() => setOpenNotif((v) => !v)}
-                      className="px-3 py-2 rounded-lg hover:bg-gray-50 flex items-center justify-between text-left"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Bell className="w-4 h-4" /> Bildirimler
-                      </span>
-                      {notifCount > 0 && (
-                        <span className="bg-red-500 text-white text-[11px] font-semibold rounded-full px-2 py-0.5">
-                          {notifCount}
-                        </span>
-                      )}
-                    </button>
-
-                    {openNotif && (
-                      <div className="border border-gray-200 rounded-xl overflow-hidden mt-1">
-                        {notifications.length === 0 ? (
-                          <div className="p-3 text-gray-500 text-[12.5px] text-center">
-                            Henüz bildiriminiz yok.
-                          </div>
-                        ) : (
-                          <ul className="max-h-56 overflow-y-auto">
-                            {notifications.map((n) => (
-                              <li
-                                key={n.id}
-                                onClick={() => handleNotificationClick(n)}
-                                className={`px-3 py-2 text-[12.5px] border-b cursor-pointer ${
-                                  !n.read ? "bg-gray-100" : ""
-                                }`}
-                              >
-                                <div className="font-medium text-gray-900">
-                                  {n.title || "Yeni bildirim"}
-                                </div>
-                                <div className="text-gray-600">
-                                  {n.message || ""}
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    )}
-
-                    <Link
-                      href="/ilan-ver"
-                      className="px-3 py-2 rounded-lg bg-[color:#FF6B00] text-white text-center"
-                      onClick={() => setMobileMenu(false)}
-                    >
-                      İlan Ver
-                    </Link>
-
-                    <button
-                      onClick={handleLogout}
-                      className="px-3 py-2 rounded-lg border border-red-200 text-red-600"
-                    >
-                      Çıkış
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
+      {/* LOGOUT */}
+      <button onClick={handleLogout} className="text-gray-400 hover:text-red-500">
+        <LogOut className="w-5 h-5" />
+      </button>
+    </div>
+  )}
+</div>
         </div>
       </header>
     </>

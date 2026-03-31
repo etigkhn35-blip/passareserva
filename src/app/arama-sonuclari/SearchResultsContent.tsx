@@ -13,6 +13,7 @@ import {
   where,
 } from "firebase/firestore";
 import defaultImages from "@/data/defaultImages";
+import { useLanguage } from "@/context/LanguageContext";
 
 /* --------------------------- Types --------------------------- */
 type Ilan = {
@@ -35,7 +36,7 @@ type Ilan = {
 
 /* ------------------------ Helpers ------------------------ */
 const formatTRY = (v?: number) =>
-  typeof v === "number" ? v.toLocaleString("tr-TR") + " ₺" : "—";
+  typeof v === "number" ? v.toLocaleString() : "—";
 
 function pickDefaultImage(kategori?: string, altKategori?: string) {
   if (!kategori) return "/defaults/fallback.jpg";
@@ -53,19 +54,45 @@ function dateRange(g?: string, c?: string) {
     const gi = new Date(g);
     const ci = new Date(c);
     const fmt = (d: Date) =>
-      d.toLocaleDateString("tr-TR", { day: "2-digit", month: "short" });
+      d.toLocaleDateString(undefined, { day: "2-digit", month: "short" });
     return `${fmt(gi)} – ${fmt(ci)}`;
   } catch {
     return "";
   }
 }
 
-/* ------------------------ CLIENT PAGE CONTENT ------------------------ */
 export default function SearchResultsContent() {
+
+  const { lang } = useLanguage();
+
+  const t = {
+    en: {
+      all: "All Listings",
+      loading: "Loading listings…",
+      result: "results found",
+      edit: "Edit Filters",
+      newSearch: "New Search",
+      noResult: "No listings found for your criteria.",
+      featured: "Featured",
+      showcase: "Showcase",
+      message: "Send Message"
+    },
+    pt: {
+      all: "Todos os anúncios",
+      loading: "Carregando anúncios…",
+      result: "resultados encontrados",
+      edit: "Editar filtros",
+      newSearch: "Nova busca",
+      noResult: "Nenhum anúncio encontrado.",
+      featured: "Destaque",
+      showcase: "Vitrine",
+      message: "Enviar mensagem"
+    }
+  }[lang];
+
   const sp = useSearchParams();
   const router = useRouter();
 
-  // URL’den filtreler
   const keyword = (sp.get("q") || sp.get("keyword") || "").trim();
   const kategori = sp.get("kategori") || sp.get("category") || "";
   const altKategori = sp.get("altKategori") || sp.get("subCategory") || "";
@@ -79,7 +106,6 @@ export default function SearchResultsContent() {
   const [items, setItems] = useState<Ilan[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Firestore’dan çekme
   useEffect(() => {
     let qRef: any = query(
       collection(db, "ilanlar"),
@@ -99,7 +125,6 @@ export default function SearchResultsContent() {
     run().catch(() => setLoading(false));
   }, []);
 
-  // İleri seviye filtreler
   const filtered = useMemo(() => {
     return items
       .filter((it) => (kategori ? it.kategori === kategori : true))
@@ -113,40 +138,14 @@ export default function SearchResultsContent() {
         typeof maxPrice === "number" ? (it.ucret || 0) <= maxPrice : true
       )
       .filter((it) => {
-  if (!keyword) return true;
-
-  const k = keyword.toLowerCase();
-
-  return (
-    (it.baslik || "").toLowerCase().includes(k) ||
-    (it.aciklama || "").toLowerCase().includes(k) ||
-    (it.kategori || "").toLowerCase().includes(k) ||
-    (it.altKategori || "").toLowerCase().includes(k) ||
-    (it.il || "").toLowerCase().includes(k) ||
-    (it.ilce || "").toLowerCase().includes(k)
-  );
-})
-      .filter((it) => {
-        if (!checkIn || !checkOut) return true;
-        if (!it.girisTarihi || !it.cikisTarihi) return true;
-        const gi = new Date(it.girisTarihi).getTime();
-        const ci = new Date(it.cikisTarihi).getTime();
-        const f1 = new Date(checkIn).getTime();
-        const f2 = new Date(checkOut).getTime();
-        return gi <= f2 && ci >= f1;
+        if (!keyword) return true;
+        const k = keyword.toLowerCase();
+        return (
+          (it.baslik || "").toLowerCase().includes(k) ||
+          (it.aciklama || "").toLowerCase().includes(k)
+        );
       });
-  }, [
-    items,
-    kategori,
-    altKategori,
-    il,
-    ilce,
-    minPrice,
-    maxPrice,
-    keyword,
-    checkIn,
-    checkOut,
-  ]);
+  }, [items, kategori, altKategori, il, ilce, minPrice, maxPrice, keyword]);
 
   const headerTitle = useMemo(() => {
     const parts: string[] = [];
@@ -155,20 +154,18 @@ export default function SearchResultsContent() {
     if (il) parts.push(il);
     if (ilce) parts.push(ilce);
     if (keyword) parts.push(`“${keyword}”`);
-    return parts.length ? parts.join(" • ") : "Tüm İlanlar";
-  }, [kategori, altKategori, il, ilce, keyword]);
+    return parts.length ? parts.join(" • ") : t.all;
+  }, [kategori, altKategori, il, ilce, keyword, t]);
 
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="max-w-[1200px] mx-auto px-4 py-6">
-        {/* Üst kısım */}
+
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{headerTitle}</h1>
             <p className="text-sm text-gray-500">
-              {loading
-                ? "İlanlar yükleniyor…"
-                : `${filtered.length} sonuç listeleniyor`}
+              {loading ? t.loading : `${filtered.length} ${t.result}`}
             </p>
           </div>
 
@@ -177,18 +174,17 @@ export default function SearchResultsContent() {
               onClick={() => router.push("/detayli-arama")}
               className="px-3 py-2 rounded-lg border text-sm hover:bg-gray-50"
             >
-              Filtreleri Düzenle
+              {t.edit}
             </button>
             <button
               onClick={() => router.push("/")}
               className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700"
             >
-              Yeni Arama
+              {t.newSearch}
             </button>
           </div>
         </div>
 
-        {/* Liste */}
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {Array.from({ length: 9 }).map((_, i) => (
@@ -204,7 +200,7 @@ export default function SearchResultsContent() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="bg-white border rounded-xl p-8 text-center text-gray-600">
-            Kriterlere uygun ilan bulunamadı.
+            {t.noResult}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -212,70 +208,28 @@ export default function SearchResultsContent() {
               const img = it.coverUrl || pickDefaultImage(it.kategori, it.altKategori);
 
               return (
-                <div
-                  key={it.id}
-                  className="group border border-gray-200 rounded-xl overflow-hidden bg-white hover:shadow-md transition"
-                >
+                <div key={it.id} className="group border rounded-xl overflow-hidden bg-white">
                   <Link href={`/ilan/${it.id}`}>
-                    <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
-                      <img
-                        src={img}
-                        alt={it.baslik}
-                        className="w-full h-full object-cover group-hover:scale-105 transition"
-                      />
-                      {it.oneCikar && (
-                        <span className="absolute top-2 left-2 text-[11px] px-2 py-1 rounded-full bg-amber-500 text-white shadow">
-                          Öne Çıkan
-                        </span>
-                      )}
-                      {it.vitrin && (
-                        <span className="absolute top-2 right-2 text-[11px] px-2 py-1 rounded-full bg-indigo-600 text-white shadow">
-                          Vitrin
-                        </span>
-                      )}
-                    </div>
+                    <img src={img} />
                   </Link>
 
                   <div className="p-4">
-                    <div className="text-xs text-gray-500 flex items-center justify-between">
-                      <span>
-                        {it.il || "—"} {it.ilce ? `• ${it.ilce}` : ""}
-                      </span>
-                      <span className="text-gray-400">
-                        {dateRange(it.girisTarihi, it.cikisTarihi)}
-                      </span>
-                    </div>
+                    <div>{it.il}</div>
 
-                    <Link href={`/ilan/${it.id}`}>
-                      <div
-                        className={`mt-1 line-clamp-1 ${
-                          it.kalinYazi ? "font-extrabold" : "font-semibold"
-                        } text-gray-900`}
-                        title={it.baslik}
-                      >
-                        {it.baslik}
-                      </div>
+                    <div>{it.baslik}</div>
+
+                    <div>{formatTRY(it.ucret)}</div>
+
+                    <Link href={`/mesajlar/yeni?ilanId=${it.id}`}>
+                      {t.message}
                     </Link>
-
-                    <div className="mt-1 text-primary font-bold">
-                      {formatTRY(it.ucret)}
-                    </div>
-
-                    <div className="mt-3 flex items-center gap-2">
-                      <Link
-                        href={`/mesajlar/yeni?ilanId=${it.id}`}
-                        className="flex-1 text-center px-3 py-2 rounded-lg border hover:bg-gray-50 text-sm"
-                      >
-                        Mesaj Gönder
-                      </Link>
-                      
-                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
         )}
+
       </div>
     </main>
   );

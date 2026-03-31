@@ -1,104 +1,156 @@
-export default function OdemeIptalIadePage() {
+"use client";
+
+import Link from "next/link";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { useLanguage } from "@/context/LanguageContext";
+
+export default function RefundPolicyPage() {
+  const { lang } = useLanguage();
+
+  const t =
+    lang === "en"
+      ? {
+          title: "CANCELLATION & REFUND POLICY",
+          subtitle: "Information about Payment, Cancellation and Withdrawal Rights",
+
+          s1: "1. Nature of the Service",
+          s1Text:
+            "PassaReserva operates as an Intermediary Service Provider under applicable electronic commerce laws. Our platform allows users (Sellers) to publish transferable rights (hotel reservations, tickets, etc.) for other users (Buyers).",
+
+          s2: "2. Payment Scope",
+          s2Text:
+            "All payments collected through the platform are solely for listing publication or promotional services. PassaReserva does not collect or mediate reservation fees, ticket prices, or transfer payments between users.",
+
+          s3: "3. Cancellation & Refund Terms",
+          s3Warn:
+            "Instant Services: According to regulations, services delivered instantly in digital environments are not subject to withdrawal rights.",
+          s3Items: [
+            "Listing publication is an instant service; therefore, no refund or cancellation is possible after activation.",
+            "In case of duplicate or incorrect payments, refunds are processed within 7 business days upon request.",
+          ],
+
+          s4: "4. Responsibility",
+          s4Items: [
+            "Accuracy of listing details is solely the responsibility of the Seller.",
+            "PassaReserva is not responsible for payments or transfers conducted outside the platform.",
+            "The platform is not a party, mediator, or arbitrator in disputes.",
+          ],
+
+          s5: "5. Contact",
+          s5Text: "For refund requests or questions, contact our support team.",
+
+          back: "← Back to Home",
+        }
+      : {
+          title: "POLÍTICA DE CANCELAMENTO E REEMBOLSO",
+          subtitle: "Informações sobre pagamento, cancelamento e direito de desistência",
+
+          s1: "1. Natureza do Serviço",
+          s1Text:
+            "O PassaReserva atua como um intermediário conforme a legislação aplicável. A plataforma permite que usuários publiquem reservas transferíveis para outros usuários.",
+
+          s2: "2. Escopo do Pagamento",
+          s2Text:
+            "Os pagamentos referem-se apenas à publicação de anúncios ou serviços promocionais. O PassaReserva não intermedeia pagamentos entre usuários.",
+
+          s3: "3. Cancelamento e Reembolso",
+          s3Warn:
+            "Serviços instantâneos não possuem direito de desistência.",
+          s3Items: [
+            "Após a publicação, não há reembolso.",
+            "Pagamentos duplicados podem ser reembolsados em até 7 dias úteis.",
+          ],
+
+          s4: "4. Responsabilidade",
+          s4Items: [
+            "A veracidade das informações é responsabilidade do vendedor.",
+            "O PassaReserva não é responsável por transações externas.",
+            "A plataforma não atua como mediadora de conflitos.",
+          ],
+
+          s5: "5. Contato",
+          s5Text: "Para suporte, entre em contato conosco.",
+
+          back: "← Voltar",
+        };
+
   return (
-    <main className="max-w-[800px] mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">
-        İptal ve İade Koşulları
-      </h1>
+    <div className="min-h-screen flex flex-col bg-white">
+      <Header />
 
-      <div className="prose prose-gray max-w-none">
-        {/* 1 */}
-        <section className="mb-10 pb-8 border-b border-gray-200">
-          <h2 className="font-bold text-lg text-gray-900">
-            1. Hizmetin Mahiyeti
-          </h2>
-          <p>
-            <strong>tatilinidevret.com</strong>, 6563 sayılı Elektronik Ticaretin
-            Düzenlenmesi Hakkında Kanun kapsamında bir{" "}
-            <strong>Aracı Hizmet Sağlayıcı</strong>dır. Platformumuz, kullanıcıların
-            (Satıcı) ellerinde bulunan devredilebilir haklarını (otel rezervasyonu,
-            konser bileti vb.) üçüncü kişilere (Alıcı) duyurmalarına imkân tanıyan
-            bir <strong>İlan Platformu</strong>dur.
-          </p>
+      <main className="flex-grow bg-slate-50/30">
+        
+        <section className="bg-white border-b border-slate-100 py-12">
+          <div className="max-w-4xl mx-auto px-6 text-center md:text-left">
+            <h1 className="text-2xl md:text-3xl font-medium text-slate-600 tracking-tight uppercase">
+              {t.title}
+            </h1>
+            <p className="text-slate-400 mt-2 text-sm font-light italic">
+              {t.subtitle}
+            </p>
+          </div>
         </section>
 
-        {/* 2 */}
-        <section className="mb-10 pb-8 border-b border-gray-200">
-          <h2 className="font-bold text-lg text-gray-900">
-            2. Ödeme ve İşlem Sınırı
-          </h2>
-          <p>
-            Platform üzerinden tahsil edilen bedeller, yalnızca{" "}
-            <strong>İlan Yayınlama Hizmet Bedeli</strong> veya{" "}
-            <strong>Doping / Öne Çıkarma Hizmetleri</strong>’ne ilişkindir.
-            tatilinidevret.com; rezervasyon bedeli, bilet ücreti veya devir bedeli
-            gibi asıl hizmet tutarlarının tahsilatını yapmaz, bu ödemelere aracılık
-            etmez ve bu bedeller üzerinden komisyon almaz.
-          </p>
+        <section className="max-w-4xl mx-auto px-6 py-12">
+          <div className="bg-white border rounded-[32px] shadow-sm p-8 md:p-12 text-slate-600">
+
+            <div className="space-y-12">
+
+              <section>
+                <h2 className="font-bold mb-4">{t.s1}</h2>
+                <p>{t.s1Text}</p>
+              </section>
+
+              <section>
+                <h2 className="font-bold mb-4">{t.s2}</h2>
+                <p>{t.s2Text}</p>
+              </section>
+
+              <section>
+                <h2 className="font-bold mb-4">{t.s3}</h2>
+                <p className="text-orange-500">{t.s3Warn}</p>
+                <ul className="list-disc ml-5 mt-3">
+                  {t.s3Items.map((i, idx) => (
+                    <li key={idx}>{i}</li>
+                  ))}
+                </ul>
+              </section>
+
+              <section>
+                <h2 className="font-bold mb-4">{t.s4}</h2>
+                <ul className="list-disc ml-5">
+                  {t.s4Items.map((i, idx) => (
+                    <li key={idx}>{i}</li>
+                  ))}
+                </ul>
+              </section>
+
+              <section>
+                <h2 className="font-bold mb-2">{t.s5}</h2>
+                <p>{t.s5Text}</p>
+                <a
+                  href="mailto:info@passareserva.com"
+                  className="inline-block mt-4 bg-sky-500 text-white px-6 py-3 rounded-xl"
+                >
+                  info@passareserva.com
+                </a>
+              </section>
+
+            </div>
+
+            <div className="text-center mt-12">
+              <Link href="/" className="text-sky-500 font-bold hover:underline">
+                {t.back}
+              </Link>
+            </div>
+
+          </div>
         </section>
 
-        {/* 3 */}
-        <section className="mb-10 pb-8 border-b border-gray-200">
-          <h2 className="font-bold text-lg text-gray-900">
-            3. İptal ve İade Şartları
-          </h2>
-          <ul className="list-disc pl-5">
-            <li>
-              <strong>Anında İfa Edilen Hizmetler:</strong> Mesafeli Sözleşmeler
-              Yönetmeliği’nin 15. maddesinin (ğ) bendi uyarınca; elektronik ortamda
-              anında ifa edilen hizmetler veya tüketiciye anında teslim edilen
-              gayrimaddi mallara ilişkin sözleşmelerde cayma hakkı kullanılamaz.
-            </li>
-            <li>
-              İlan yayınlama işlemi, ödeme yapıldığı anda elektronik ortamda
-              gerçekleşen bir hizmet olduğundan, ilan yayına alındıktan sonra{" "}
-              <strong>ücret iadesi veya iptali mümkün değildir</strong>.
-            </li>
-            <li>
-              Hatalı ödeme veya mükerrer (üst üste) ödeme durumlarında, kullanıcının
-              talebi üzerine gerekli incelemeler yapılarak{" "}
-              <strong>7 iş günü</strong> içerisinde iade işlemi başlatılır.
-            </li>
-          </ul>
-        </section>
+      </main>
 
-        {/* 4 */}
-        <section className="mb-10 pb-8 border-b border-gray-200">
-          <h2 className="font-bold text-lg text-gray-900">
-            4. Tarafların Sorumluluğu
-          </h2>
-          <ul className="list-disc pl-5">
-            <li>
-              İlan içeriğinde yer alan bilgilerin doğruluğu, devrin yasal uygunluğu
-              ve otel / organizatör nezdindeki geçerliliği tamamen{" "}
-              <strong>Satıcı</strong>’nın sorumluluğundadır.
-            </li>
-            <li>
-              Alıcı ve Satıcı arasında platform dışı gerçekleşen para transferi,
-              isim değişikliği, rezervasyon devri veya fiziksel bilet teslimi
-              süreçlerinden <strong>tatilinidevret.com</strong> hiçbir şekilde
-              sorumlu tutulamaz.
-            </li>
-            <li>
-              Platformumuz, yaşanabilecek uyuşmazlıklarda bir taraf, hakem veya
-              aracı değildir.
-            </li>
-          </ul>
-        </section>
-
-        {/* 5 */}
-        <section>
-          <h2 className="font-bold text-lg text-gray-900">
-            5. İletişim
-          </h2>
-          <p>
-            İptal, iade veya ilan süreçlerine dair her türlü sorunuz için{" "}
-            <a href="mailto:info@tatilinidevret.com">
-              info@tatilinidevret.com
-            </a>{" "}
-            adresi üzerinden müşteri hizmetlerimize ulaşabilirsiniz.
-          </p>
-        </section>
-      </div>
-    </main>
+      <Footer />
+    </div>
   );
 }
