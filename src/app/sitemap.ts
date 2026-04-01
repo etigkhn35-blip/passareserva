@@ -1,14 +1,27 @@
-import { MetadataRoute } from "next";
+import { db } from "@/lib/firebaseConfig";
+import { collection, getDocs } from "firebase/firestore";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap() {
+  const baseUrl = "https://passareserva.com";
+
+  const snapshot = await getDocs(collection(db, "ilanlar"));
+
+  const listings = snapshot.docs
+    .filter(doc => doc.data().status === "approved") // only approved listings
+    .map(doc => ({
+      url: `${baseUrl}/listing/${doc.id}`,
+      lastModified: new Date(),
+    }));
+
   return [
     {
-      url: "https://passareserva.com",
+      url: baseUrl,
       lastModified: new Date(),
     },
     {
-      url: "https://passareserva.com/ilanlar",
+      url: `${baseUrl}/listings`,
       lastModified: new Date(),
     },
+    ...listings,
   ];
 }
